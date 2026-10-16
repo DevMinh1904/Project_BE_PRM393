@@ -1,13 +1,14 @@
 package com.smartquiz.entity;
 
-import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "otp_verifications")
+@Document(collection = "otp_verifications")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -16,18 +17,15 @@ import java.time.LocalDateTime;
 public class OtpVerification {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
-    @Column(nullable = false, unique = true, length = 150)
+    @Indexed(unique = true)
     private String email;
 
-    @Column(nullable = false, length = 10)
     private String otpCode;
 
-    @Column(nullable = false)
     private LocalDateTime expiryTime;
 
-    @UpdateTimestamp
+    @LastModifiedDate
     private LocalDateTime updatedAt;
 }

@@ -1,13 +1,13 @@
 package com.smartquiz.entity;
 
-import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "quiz_submissions")
+@Document(collection = "quiz_submissions")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -16,27 +16,18 @@ import java.time.LocalDateTime;
 public class QuizSubmission {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    private String userId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "quiz_set_id", nullable = false)
-    private QuizSet quizSet;
+    private String quizSetId;
 
-    @Column(nullable = false)
     private Double score; // e.g. 85.5%
 
-    @Column(nullable = false)
     private Integer correctCount;
 
-    @Column(nullable = false)
     private Integer totalQuestions;
 
-    @CreationTimestamp
-    @Column(updatable = false)
+    @CreatedDate
     private LocalDateTime submittedAt;
 }

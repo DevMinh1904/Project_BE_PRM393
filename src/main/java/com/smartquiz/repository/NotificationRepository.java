@@ -1,17 +1,17 @@
 package com.smartquiz.repository;
 
 import com.smartquiz.entity.Notification;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
 @Repository
-public interface NotificationRepository extends JpaRepository<Notification, Long> {
+public interface NotificationRepository extends MongoRepository<Notification, String> {
 
-    List<Notification> findByUserId(Long userId);
+    List<Notification> findByUserId(String userId);
 
-    List<Notification> findByUserIdOrderByTimestampDesc(Long userId);
+    List<Notification> findByUserIdOrderByTimestampDesc(String userId);
 
-    List<Notification> findByUserIdAndIsReadFalseOrderByTimestampDesc(Long userId);
+    List<Notification> findByUserIdAndIsReadFalseOrderByTimestampDesc(String userId);
 }

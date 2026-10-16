@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class QuestionDto {
 
-    private Long id;
+    private String id;
 
     @NotBlank(message = "Question text is required")
     private String questionText;

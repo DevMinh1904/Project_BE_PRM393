@@ -52,7 +52,7 @@ public class AuthController {
 
     @GetMapping("/profile/{userId}")
     @Operation(summary = "Get user profile", description = "Fetches the current user profile and streak details by user ID.")
-    public ResponseEntity<ApiResponse<UserResponse>> getProfile(@PathVariable Long userId) {
+    public ResponseEntity<ApiResponse<UserResponse>> getProfile(@PathVariable String userId) {
         UserResponse userResponse = authService.getUserProfile(userId);
         return ResponseEntity.ok(ApiResponse.ok(userResponse, "User profile retrieved successfully"));
     }

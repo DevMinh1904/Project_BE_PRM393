@@ -13,10 +13,10 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class NotificationDto {
 
-    private Long id;
+    private String id;
     private String title;
     private String message;
     private LocalDateTime timestamp;
     private Boolean isRead;
-    private Long userId;
+    private String userId;
 }

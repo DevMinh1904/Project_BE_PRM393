@@ -8,7 +8,7 @@ public interface JwtService {
 
     String extractEmail(String token);
 
-    Long extractUserId(String token);
+    String extractUserId(String token);
 
     boolean isTokenValid(String token);
 }

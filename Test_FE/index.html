@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartQuiz API Test Frontend</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --code-bg: #1e293b;
+      --code-text: #f1f5f9;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 20px; line-height: 1.5; }
+    header { margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid var(--border); }
+    h1 { font-size: 1.6rem; color: #1e293b; display: flex; align-items: center; gap: 8px; }
+    h2 { font-size: 1.15rem; margin-bottom: 12px; color: #334155; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    .subtitle { color: var(--text-muted); font-size: 0.9rem; margin-top: 4px; }
+    
+    .status-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+    }
+    .status-bar input {
+      padding: 6px 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 0.8rem;
+      background: #e2e8f0;
+    }
+    .badge-success { background: #dcfce7; color: #15803d; }
+    .badge-warning { background: #fef3c7; color: #b45309; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 1024px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    .form-group {
+      margin-bottom: 10px;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.85rem;
+      margin-bottom: 4px;
+      color: #475569;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      background: #fff;
+    }
+    textarea { font-family: monospace; font-size: 0.85rem; resize: vertical; }
+    
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    button {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      background: var(--primary);
+      color: #fff;
+      transition: background 0.15s ease;
+    }
+    button:hover { background: var(--primary-hover); }
+    button.btn-secondary { background: #64748b; }
+    button.btn-secondary:hover { background: #475569; }
+    button.btn-danger { background: var(--danger); }
+    button.btn-danger:hover { background: #b91c1c; }
+    button.btn-success { background: var(--success); }
+    button.btn-success:hover { background: #15803d; }
+    button.btn-sm { padding: 4px 8px; font-size: 0.8rem; }
+
+    /* Response Console */
+    .console-container {
+      position: sticky;
+      top: 20px;
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 40px);
+    }
+    .console-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f172a;
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 8px 8px 0 0;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .console-body {
+      flex: 1;
+      background: var(--code-bg);
+      color: var(--code-text);
+      padding: 14px;
+      overflow-y: auto;
+      font-family: Consolas, Monaco, "Courier New", monospace;
+      font-size: 0.85rem;
+      border-radius: 0 0 8px 8px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .log-entry {
+      border-bottom: 1px solid #334155;
+      padding-bottom: 12px;
+      margin-bottom: 12px;
+    }
+    .log-meta {
+      color: #94a3b8;
+      font-size: 0.8rem;
+      margin-bottom: 4px;
+    }
+    .log-meta .status-ok { color: #4ade80; font-weight: bold; }
+    .log-meta .status-err { color: #f87171; font-weight: bold; }
+
+    .tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 16px;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 2px;
+    }
+    .tab-btn {
+      background: #e2e8f0;
+      color: #334155;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px 6px 0 0;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .tab-btn.active {
+      background: var(--primary);
+      color: #fff;
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🧪 SmartQuiz API Testing Console</h1>
+    <p class="subtitle">Complete test client for all Spring Boot backend endpoints (Auth, Quizzes, Questions, Excel/CSV Import, Quiz Submission, Notifications)</p>
+  </header>
+
+  <!-- Global Settings & Auth Bar -->
+  <div class="status-bar">
+    <div>
+      <label style="display:inline; margin-right:6px;">API Base URL:</label>
+      <input type="text" id="baseUrl" value="http://localhost:8088" style="width: 220px;" />
+    </div>
+    <div>
+      <strong>Current User ID:</strong>
+      <span id="currentUserIdBadge" class="badge">Not Set</span>
+    </div>
+    <div>
+      <strong>Auth Token:</strong>
+      <span id="tokenStatusBadge" class="badge badge-warning">No Token</span>
+    </div>
+    <div style="margin-left: auto; display: flex; gap: 8px;">
+      <button class="btn-sm btn-secondary" onclick="quickFillDemoUser()">⚡ Fill Alex Demo User</button>
+      <button class="btn-sm btn-danger" onclick="clearToken()">Clear Session</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- Left Column: API Functions -->
+    <div>
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('tab-auth')">1. Auth & Profile</button>
+        <button class="tab-btn" onclick="switchTab('tab-quiz')">2. Quizzes & Import</button>
+        <button class="tab-btn" onclick="switchTab('tab-notif')">3. Notifications</button>
+      </div>
+
+      <!-- TAB 1: AUTHENTICATION -->
+      <div id="tab-auth" class="tab-content active">
+        <!-- 1. Send OTP -->
+        <div class="card">
+          <h2>1. Send Registration OTP</h2>
+          <p class="subtitle" style="margin-bottom:8px;">Endpoint: <code>POST /api/auth/send-otp</code></p>
+          <div class="form-group">
+            <label>Recipient Email:</label>
+            <input type="email" id="otpEmail" placeholder="e.g. learner@example.com" />
+          </div>
+          <div class="btn-row">
+            <button onclick="sendOtp()">Send OTP Email</button>
+          </div>
+        </div>
+
+        <!-- 2. Register with OTP -->
+        <div class="card">
+          <h2>2. Register Account with OTP</h2>
+          <p class="subtitle" style="margin-bottom:8px;">Endpoint: <code>POST /api/auth/register</code></p>
+          <div class="form-group">
+            <label>Full Name:</label>
+            <input type="text" id="regFullName" placeholder="e.g. Jane Doe" />
+          </div>
+          <div class="form-group">
+            <label>Email:</label>
+            <input type="email" id="regEmail" placeholder="e.g. learner@example.com" />
+          </div>
+          <div class="form-group">
+            <label>Password:</label>
+            <input type="password" id="regPassword" placeholder="e.g. password123" />
+          </div>
+          <div class="form-group">
+            <label>6-Digit OTP:</label>
+            <input type="text" id="regOtp" placeholder="e.g. 123456" />
+          </div>
+          <div class="btn-row">
+            <button class="btn-success" onclick="registerUser()">Register & Verify</button>
+          </div>
+        </div>
+
+        <!-- 3. Login -->
+        <div class="card">
+          <h2>3. Login (Get JWT Token)</h2>
+          <p class="subtitle" style="margin-bottom:8px;">Endpoint: <code>POST /api/auth/login</code></p>
+          <div class="form-group">
+            <label>Email:</label>
+            <input type="email" id="loginEmail" value="alex@smartquiz.com" />
+          </div>
+          <div class="form-group">
+            <label>Password:</label>
+            <input type="password" id="loginPassword" value="secret123" />
+          </div>
+          <div class="btn-row">
+            <button onclick="loginUser()">Log In</button>
+          </div>
+        </div>
+
+        <!-- 4. Get User Profile -->
+        <div class="card">
+          <h2>4. Get User Profile</h2>
+          <p class="subtitle" style="margin-bottom:8px;">Endpoint: <code>GET /api/auth/profile/{userId}</code></p>
+          <div class="form-group">
+            <label>User ID:</label>
+            <input type="text" id="profileUserId" placeholder="User ID (defaults to active user)" />
+          </div>
+          <div class="btn-row">
+            <button class="btn-secondary" onclick="getUserProfile()">Fetch Profile</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: QUIZZES -->
+      <div id="tab-quiz" class="tab-content">
+        <!-- 1. Get All Quizzes -->
+        <div class="card">
+          <h2>1. Get All Quizzes (Library / Filter)</h2>
+          <p class="subtitle" style="margin-bottom:8px;">Endpoint: <code>GET /api/quizzes</code></p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+            <div class="form-group">
+              <label>Category:</label>
+              <input type="text" id="quizFilterCat" placeholder="e.g. Mobile" />
+            </div>
+            <div class="form-group">
+              <label>Difficulty:</label>
+              <select id="quizFilterDiff">
+                <option value="">All</option>
+                <option value="EASY">EASY</option>
+                <option value="MEDIUM">MEDIUM</option>
+                <option value="HARD">HARD</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Search:</label>
+              <input type="text" id="quizFilterSearch" placeholder="Search keyword..." />
+            </div>
+          </div>
+          <div class="btn-row">
+            <button onclick="getAllQuizzes()">Fetch Quizzes</button>
+          </div>
+        </div>
+
+        <!-- 2. Get Quiz by ID -->
+        <div class="card">
+          <h2>2. Get Quiz Details & Questions</h2>
+          <p class="subtitle" style="margin-bottom:8px;">Endpoint: <code>GET /api/quizzes/{id}</code></p>
+          <div class="form-group">
+            <label>Quiz ID:</label>
+            <input type="text" id="detailQuizId" placeholder="Quiz ID" />
+          </div>
+          <div class="btn-row">
+            <button class="btn-secondary" onclick="getQuizById()">Fetch Quiz & Questions</button>
+            <button class="btn-danger" onclick="deleteQuiz()">Delete Quiz</button>
+          </div>
+        </div>
+
+        <!-- 3. Import Quiz via Excel/CSV -->
+        <div class="card">
+          <h2>3. Import Quiz from Excel (.xlsx) or CSV</h2>
+          <p class="subtitle" style="margin-bottom:8px;">Endpoint: <code>POST /api/quizzes/import</code> (Multipart Form Data)</p>
+          <div class="form-group">
+            <label>Select File (.xlsx, .xls, .csv):</label>
+            <input type="file" id="importFile" accept=".xlsx,.xls,.csv" />
+            <small style="color:var(--text-muted);">You can use the files in <code>sample_files/flutter_quiz_sample.xlsx</code> or <code>quiz_sample.csv</code></small>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div class="form-group">
+              <label>Title (Optional):</label>
+              <input type="text" id="importTitle" placeholder="Custom Quiz Title" />
+            </div>
+            <div class="form-group">
+              <label>Category (Optional):</label>
+              <input type="text" id="importCategory" placeholder="e.g. Software Testing" />
+            </div>
+            <div class="form-group">
+              <label>Time Limit (Minutes):</label>
+              <input type="number" id="importTime" value="15" />
+            </div>
+            <div class="form-group">
+              <label>Difficulty:</label>
+              <select id="importDifficulty">
+                <option value="MEDIUM">MEDIUM</option>
+                <option value="EASY">EASY</option>
+                <option value="HARD">HARD</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Description:</label>
+            <input type="text" id="importDesc" placeholder="Brief overview of quiz" />
+          </div>
+          <div class="btn-row">
+            <button class="btn-success" onclick="importQuizFile()">📤 Upload & Import</button>
+          </div>
+        </div>
+
+        <!-- 4. Create Quiz Manually (JSON) -->
+        <div class="card">
+          <h2>4. Create Quiz Set Manually (JSON)</h2>
+          <p class="subtitle" style="margin-bottom:8px;">Endpoint: <code>POST /api/quizzes</code></p>
+          <div class="form-group">
+            <label>QuizSet JSON with Questions:</label>
+            <textarea id="createQuizJson" rows="7"></textarea>
+          </div>
+          <div class="btn-row">
+            <button class="btn-secondary btn-sm" onclick="populateSampleQuizJson()">Load Sample JSON</button>
+            <button onclick="createQuizManual()">Create Quiz</button>
+          </div>
+        </div>
+
+        <!-- 5. Submit Quiz Answers -->
+        <div class="card">
+          <h2>5. Submit Quiz Answers & Calculate Score</h2>
+          <p class="subtitle" style="margin-bottom:8px;">Endpoint: <code>POST /api/quizzes/{id}/submit</code></p>
+          <div class="form-group">
+            <label>Quiz ID:</label>
+            <input type="text" id="submitQuizId" placeholder="Quiz ID" />
+          </div>
+          <div class="form-group">
+            <label>User ID:</label>
+            <input type="text" id="submitUserId" placeholder="User ID" />
+          </div>
+          <div class="form-group">
+            <label>Answers Map JSON (questionId: "A" | "B" | "C" | "D"):</label>
+            <textarea id="submitAnswersJson" rows="4">{"question_id_here": "B"}</textarea>
+          </div>
+          <div class="btn-row">
+            <button class="btn-success" onclick="submitQuizAnswers()">Submit & Compute Result</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: NOTIFICATIONS -->
+      <div id="tab-notif" class="tab-content">
+        <!-- 1. Get User Notifications -->
+        <div class="card">
+          <h2>1. Fetch User Notifications & Alerts</h2>
+          <p class="subtitle" style="margin-bottom:8px;">Endpoint: <code>GET /api/notifications/{userId}</code></p>
+          <div class="form-group">
+            <label>User ID:</label>
+            <input type="text" id="notifUserId" placeholder="User ID" />
+          </div>
+          <div class="btn-row">
+            <button onclick="getUserNotifications()">Get Notifications</button>
+          </div>
+        </div>
+
+        <!-- 2. Create Custom Notification -->
+        <div class="card">
+          <h2>2. Create Custom Notification / Study Alert</h2>
+          <p class="subtitle" style="margin-bottom:8px;">Endpoint: <code>POST /api/notifications</code></p>
+          <div class="form-group">
+            <label>Target User ID:</label>
+            <input type="text" id="createNotifUserId" placeholder="User ID" />
+          </div>
+          <div class="form-group">
+            <label>Title:</label>
+            <input type="text" id="createNotifTitle" value="Study Reminder: Practice Flutter Quiz!" />
+          </div>
+          <div class="form-group">
+            <label>Message:</label>
+            <input type="text" id="createNotifMsg" value="Don't break your 5-day streak! Complete 1 quiz today." />
+          </div>
+          <div class="btn-row">
+            <button class="btn-success" onclick="createNotification()">Create Alert</button>
+          </div>
+        </div>
+
+        <!-- 3. Mark Notification as Read -->
+        <div class="card">
+          <h2>3. Mark Notification as Read</h2>
+          <p class="subtitle" style="margin-bottom:8px;">Endpoint: <code>PUT /api/notifications/{id}/read</code></p>
+          <div class="form-group">
+            <label>Notification ID:</label>
+            <input type="text" id="readNotifId" placeholder="Notification ID" />
+          </div>
+          <div class="btn-row">
+            <button class="btn-secondary" onclick="markNotificationRead()">Mark As Read</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Live Response Console -->
+    <div class="console-container">
+      <div class="console-header">
+        <span>📡 Live API Response Console</span>
+        <button class="btn-sm btn-secondary" onclick="clearConsole()">Clear Log</button>
+      </div>
+      <div id="consoleBody" class="console-body">
+// Ready. Click any button on the left to test backend endpoints.
+// Responses with HTTP status, latency, and formatted JSON will appear here.
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

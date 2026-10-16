@@ -1,17 +1,16 @@
 package com.smartquiz.entity;
 
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Entity
-@Table(name = "quiz_sets")
+@Document(collection = "quiz_sets")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -20,53 +19,45 @@ import java.util.List;
 public class QuizSet {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
-    @Column(nullable = false, length = 200)
     private String title;
 
-    @Column(nullable = false, length = 100)
     private String category;
 
-    @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(nullable = false)
     @Builder.Default
     private Integer totalQuestions = 0;
 
-    @Column(nullable = false)
     @Builder.Default
     private Integer timeLimitMinutes = 15;
 
-    @Column(nullable = false, length = 30)
     @Builder.Default
     private String difficulty = "MEDIUM";
 
-    @Column(nullable = false)
     @Builder.Default
     private Double avgScore = 0.0;
 
-    @CreationTimestamp
-    @Column(updatable = false)
+    @CreatedDate
     private LocalDateTime createdAt;
 
-    @UpdateTimestamp
+    @LastModifiedDate
     private LocalDateTime updatedAt;
 
-    @OneToMany(mappedBy = "quizSet", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @JsonManagedReference
     @Builder.Default
     private List<Question> questions = new ArrayList<>();
 
     public void addQuestion(Question question) {
+        if (questions == null) {
+            questions = new ArrayList<>();
+        }
         questions.add(question);
-        question.setQuizSet(this);
     }
 
     public void removeQuestion(Question question) {
-        questions.remove(question);
-        question.setQuizSet(null);
+        if (questions != null) {
+            questions.remove(question);
+        }
     }
 }

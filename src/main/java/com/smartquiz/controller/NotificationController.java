@@ -25,7 +25,7 @@ public class NotificationController {
 
     @GetMapping("/{userId}")
     @Operation(summary = "Fetch user study reminders and alerts", description = "Retrieves all notifications and study alerts for a specific user.")
-    public ResponseEntity<ApiResponse<List<NotificationDto>>> getNotificationsByUserId(@PathVariable Long userId) {
+    public ResponseEntity<ApiResponse<List<NotificationDto>>> getNotificationsByUserId(@PathVariable String userId) {
         List<NotificationDto> notifications = notificationService.getUserNotifications(userId);
         return ResponseEntity.ok(ApiResponse.ok(notifications, "Notifications retrieved successfully"));
     }
@@ -40,7 +40,7 @@ public class NotificationController {
 
     @PutMapping("/{id}/read")
     @Operation(summary = "Mark notification as read", description = "Marks a specific notification as read.")
-    public ResponseEntity<ApiResponse<NotificationDto>> markAsRead(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<NotificationDto>> markAsRead(@PathVariable String id) {
         NotificationDto notification = notificationService.markAsRead(id);
         return ResponseEntity.ok(ApiResponse.ok(notification, "Notification marked as read"));
     }

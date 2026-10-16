@@ -16,7 +16,7 @@ import java.util.List;
 @AllArgsConstructor
 public class QuizSetDto {
 
-    private Long id;
+    private String id;
 
     @NotBlank(message = "Title is required")
     private String title;

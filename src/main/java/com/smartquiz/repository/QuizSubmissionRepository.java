@@ -1,15 +1,15 @@
 package com.smartquiz.repository;
 
 import com.smartquiz.entity.QuizSubmission;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
 @Repository
-public interface QuizSubmissionRepository extends JpaRepository<QuizSubmission, Long> {
+public interface QuizSubmissionRepository extends MongoRepository<QuizSubmission, String> {
 
-    List<QuizSubmission> findByUserIdOrderBySubmittedAtDesc(Long userId);
+    List<QuizSubmission> findByUserId(String userId);
 
-    List<QuizSubmission> findByQuizSetId(Long quizSetId);
+    List<QuizSubmission> findByQuizSetId(String quizSetId);
 }

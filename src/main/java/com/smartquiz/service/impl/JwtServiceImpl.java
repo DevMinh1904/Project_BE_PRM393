@@ -54,10 +54,10 @@ public class JwtServiceImpl implements JwtService {
     }
 
     @Override
-    public Long extractUserId(String token) {
+    public String extractUserId(String token) {
         Claims claims = extractAllClaims(token);
-        Number userId = claims.get("userId", Number.class);
-        return userId != null ? userId.longValue() : null;
+        Object userId = claims.get("userId");
+        return userId != null ? String.valueOf(userId) : null;
     }
 
     @Override

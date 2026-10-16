@@ -11,13 +11,13 @@ public interface QuizService {
 
     List<QuizSetDto> getAllQuizzes(String category, String difficulty, String search);
 
-    QuizSetDto getQuizById(Long id);
+    QuizSetDto getQuizById(String id);
 
     QuizSetDto createQuiz(QuizSetDto quizSetDto);
 
     QuizSetDto importQuizFromFile(MultipartFile file, String title, String category, String description, Integer timeLimitMinutes, String difficulty);
 
-    QuizSubmissionResponse submitQuiz(Long quizId, QuizSubmissionRequest request);
+    QuizSubmissionResponse submitQuiz(String id, QuizSubmissionRequest request);
 
-    void deleteQuiz(Long id);
+    void deleteQuiz(String id);
 }

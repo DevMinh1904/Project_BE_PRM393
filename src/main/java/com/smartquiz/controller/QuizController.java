@@ -41,7 +41,7 @@ public class QuizController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get quiz details with questions", description = "Retrieves detailed quiz metadata along with all its multiple choice questions.")
-    public ResponseEntity<ApiResponse<QuizSetDto>> getQuizById(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<QuizSetDto>> getQuizById(@PathVariable String id) {
         QuizSetDto quiz = quizService.getQuizById(id);
         return ResponseEntity.ok(ApiResponse.ok(quiz, "Quiz details retrieved successfully"));
     }
@@ -57,7 +57,7 @@ public class QuizController {
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(
             summary = "Import quiz from Excel (.xlsx) or CSV file",
-            description = "Crucial Feature: Accepts a multipart .xlsx or .csv file up to 15MB, parses rows using Apache POI (Column A = Question, B-E = options, F = correct answer), and creates a new QuizSet with all Question entities in MySQL."
+            description = "Accepts a multipart .xlsx or .csv file up to 15MB, parses rows using Apache POI, and creates a new QuizSet in MongoDB."
     )
     public ResponseEntity<ApiResponse<QuizSetDto>> importQuiz(
             @Parameter(description = "Excel (.xlsx, .xls) or CSV file containing questions", required = true,
@@ -78,7 +78,7 @@ public class QuizController {
     @PostMapping("/{id}/submit")
     @Operation(summary = "Submit quiz answers for evaluation", description = "Submits user's answers for a quiz, computes score percentage, updates user's streak, and generates a notification alert.")
     public ResponseEntity<ApiResponse<QuizSubmissionResponse>> submitQuiz(
-            @PathVariable Long id,
+            @PathVariable String id,
             @Valid @RequestBody QuizSubmissionRequest request) {
         QuizSubmissionResponse response = quizService.submitQuiz(id, request);
         return ResponseEntity.ok(ApiResponse.ok(response, "Quiz evaluated successfully"));
@@ -86,7 +86,7 @@ public class QuizController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete quiz set", description = "Deletes a quiz set and cascades removal to all its questions.")
-    public ResponseEntity<ApiResponse<Void>> deleteQuiz(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deleteQuiz(@PathVariable String id) {
         quizService.deleteQuiz(id);
         return ResponseEntity.ok(ApiResponse.ok(null, "Quiz set deleted successfully"));
     }

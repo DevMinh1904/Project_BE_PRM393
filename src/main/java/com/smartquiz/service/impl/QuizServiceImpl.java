@@ -9,7 +9,6 @@ import com.smartquiz.entity.User;
 import com.smartquiz.exception.BadRequestException;
 import com.smartquiz.exception.ResourceNotFoundException;
 import com.smartquiz.repository.NotificationRepository;
-import com.smartquiz.repository.QuestionRepository;
 import com.smartquiz.repository.QuizSetRepository;
 import com.smartquiz.repository.QuizSubmissionRepository;
 import com.smartquiz.repository.UserRepository;
@@ -17,14 +16,15 @@ import com.smartquiz.service.FileParserService;
 import com.smartquiz.service.QuizService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,21 +33,32 @@ import java.util.stream.Collectors;
 public class QuizServiceImpl implements QuizService {
 
     private final QuizSetRepository quizSetRepository;
-    private final QuestionRepository questionRepository;
     private final UserRepository userRepository;
     private final QuizSubmissionRepository submissionRepository;
     private final NotificationRepository notificationRepository;
     private final FileParserService fileParserService;
+    private final MongoTemplate mongoTemplate;
 
     @Override
-    @Transactional(readOnly = true)
     public List<QuizSetDto> getAllQuizzes(String category, String difficulty, String search) {
         log.info("Fetching quiz sets with filters - category: {}, difficulty: {}, search: {}", category, difficulty, search);
-        List<QuizSet> quizSets = quizSetRepository.searchQuizzes(
-                (category != null && !category.isBlank()) ? category.trim() : null,
-                (difficulty != null && !difficulty.isBlank()) ? difficulty.trim() : null,
-                (search != null && !search.isBlank()) ? search.trim() : null
-        );
+
+        Query query = new Query();
+        if (category != null && !category.isBlank()) {
+            query.addCriteria(Criteria.where("category").regex("^" + Pattern.quote(category.trim()) + "$", "i"));
+        }
+        if (difficulty != null && !difficulty.isBlank()) {
+            query.addCriteria(Criteria.where("difficulty").regex("^" + Pattern.quote(difficulty.trim()) + "$", "i"));
+        }
+        if (search != null && !search.isBlank()) {
+            String s = Pattern.quote(search.trim());
+            query.addCriteria(new Criteria().orOperator(
+                    Criteria.where("title").regex(s, "i"),
+                    Criteria.where("description").regex(s, "i")
+            ));
+        }
+
+        List<QuizSet> quizSets = mongoTemplate.find(query, QuizSet.class);
 
         return quizSets.stream()
                 .map(this::mapToDtoWithoutQuestions)
@@ -55,8 +66,7 @@ public class QuizServiceImpl implements QuizService {
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public QuizSetDto getQuizById(Long id) {
+    public QuizSetDto getQuizById(String id) {
         log.info("Fetching quiz set details for ID: {}", id);
         QuizSet quizSet = quizSetRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("QuizSet", "id", id));
@@ -64,7 +74,6 @@ public class QuizServiceImpl implements QuizService {
     }
 
     @Override
-    @Transactional
     public QuizSetDto createQuiz(QuizSetDto quizSetDto) {
         log.info("Creating manual quiz set: {}", quizSetDto.getTitle());
 
@@ -80,6 +89,7 @@ public class QuizServiceImpl implements QuizService {
         if (quizSetDto.getQuestions() != null) {
             for (QuestionDto qDto : quizSetDto.getQuestions()) {
                 Question question = Question.builder()
+                        .id(UUID.randomUUID().toString())
                         .questionText(qDto.getQuestionText())
                         .optionA(qDto.getOptionA())
                         .optionB(qDto.getOptionB())
@@ -98,7 +108,6 @@ public class QuizServiceImpl implements QuizService {
     }
 
     @Override
-    @Transactional
     public QuizSetDto importQuizFromFile(MultipartFile file, String title, String category, String description, Integer timeLimitMinutes, String difficulty) {
         log.info("Importing quiz from file: {}", file.getOriginalFilename());
 
@@ -124,6 +133,9 @@ public class QuizServiceImpl implements QuizService {
                 .build();
 
         for (Question q : parsedQuestions) {
+            if (q.getId() == null || q.getId().isBlank()) {
+                q.setId(UUID.randomUUID().toString());
+            }
             quizSet.addQuestion(q);
         }
 
@@ -134,8 +146,7 @@ public class QuizServiceImpl implements QuizService {
     }
 
     @Override
-    @Transactional
-    public QuizSubmissionResponse submitQuiz(Long quizId, QuizSubmissionRequest request) {
+    public QuizSubmissionResponse submitQuiz(String quizId, QuizSubmissionRequest request) {
         log.info("User {} submitting answers for quiz ID: {}", request.getUserId(), quizId);
 
         QuizSet quizSet = quizSetRepository.findById(quizId)
@@ -151,7 +162,7 @@ public class QuizServiceImpl implements QuizService {
 
         int correctCount = 0;
         List<QuizSubmissionResponse.QuestionResult> results = new ArrayList<>();
-        Map<Long, String> userAnswers = request.getAnswers() != null ? request.getAnswers() : Map.of();
+        Map<String, String> userAnswers = request.getAnswers() != null ? request.getAnswers() : Map.of();
 
         for (Question question : questions) {
             String selected = userAnswers.get(question.getId());
@@ -174,8 +185,8 @@ public class QuizServiceImpl implements QuizService {
 
         // Save submission
         QuizSubmission submission = QuizSubmission.builder()
-                .user(user)
-                .quizSet(quizSet)
+                .userId(user.getId())
+                .quizSetId(quizSet.getId())
                 .score(scorePercentage)
                 .correctCount(correctCount)
                 .totalQuestions(questions.size())
@@ -203,7 +214,7 @@ public class QuizServiceImpl implements QuizService {
                         ")! Your current learning streak is now " + updatedStreak + " days 🔥.")
                 .timestamp(LocalDateTime.now())
                 .isRead(false)
-                .user(user)
+                .userId(user.getId())
                 .build();
         notificationRepository.save(notice);
 
@@ -216,14 +227,13 @@ public class QuizServiceImpl implements QuizService {
                 .correctCount(correctCount)
                 .totalQuestions(questions.size())
                 .updatedStreak(updatedStreak)
-                .submittedAt(submission.getSubmittedAt())
+                .submittedAt(submission.getSubmittedAt() != null ? submission.getSubmittedAt() : LocalDateTime.now())
                 .questionResults(results)
                 .build();
     }
 
     @Override
-    @Transactional
-    public void deleteQuiz(Long id) {
+    public void deleteQuiz(String id) {
         if (!quizSetRepository.existsById(id)) {
             throw new ResourceNotFoundException("QuizSet", "id", id);
         }

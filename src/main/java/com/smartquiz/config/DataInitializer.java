@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Configuration;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Configuration
 @RequiredArgsConstructor
@@ -27,7 +28,7 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         if (userRepository.count() == 0) {
-            log.info("Initializing demo data for SmartQuiz backend...");
+            log.info("Initializing demo data in MongoDB Atlas for SmartQuiz backend...");
 
             // 1. Create Demo User
             User demoUser = User.builder()
@@ -36,6 +37,7 @@ public class DataInitializer implements CommandLineRunner {
                     .password("secret123")
                     .currentStreak(5)
                     .isVerified(true)
+                    .createdAt(LocalDateTime.now())
                     .build();
             demoUser = userRepository.save(demoUser);
 
@@ -45,7 +47,7 @@ public class DataInitializer implements CommandLineRunner {
                     .message("You completed your study session yesterday. Keep up the 5-day streak!")
                     .timestamp(LocalDateTime.now().minusHours(4))
                     .isRead(false)
-                    .user(demoUser)
+                    .userId(demoUser.getId())
                     .build();
 
             Notification n2 = Notification.builder()
@@ -53,13 +55,12 @@ public class DataInitializer implements CommandLineRunner {
                     .message("Test your knowledge on state management and widget lifecycles in Flutter.")
                     .timestamp(LocalDateTime.now().minusDays(1))
                     .isRead(true)
-                    .user(demoUser)
+                    .userId(demoUser.getId())
                     .build();
 
             notificationRepository.saveAll(List.of(n1, n2));
 
             // 3. Create Sample Quiz Sets
-            // Quiz 1: Mobile App Development (Flutter & Android)
             QuizSet quiz1 = QuizSet.builder()
                     .title("Mobile App Architecture (PRM393)")
                     .category("Computer Science")
@@ -68,9 +69,11 @@ public class DataInitializer implements CommandLineRunner {
                     .timeLimitMinutes(15)
                     .totalQuestions(5)
                     .avgScore(82.5)
+                    .createdAt(LocalDateTime.now())
                     .build();
 
             quiz1.addQuestion(Question.builder()
+                    .id(UUID.randomUUID().toString())
                     .questionText("What programming language is used for Flutter?")
                     .optionA("Dart")
                     .optionB("Kotlin")
@@ -81,6 +84,7 @@ public class DataInitializer implements CommandLineRunner {
                     .build());
 
             quiz1.addQuestion(Question.builder()
+                    .id(UUID.randomUUID().toString())
                     .questionText("What state management package is recommended by Google for Flutter?")
                     .optionA("Redux")
                     .optionB("Provider")
@@ -91,6 +95,7 @@ public class DataInitializer implements CommandLineRunner {
                     .build());
 
             quiz1.addQuestion(Question.builder()
+                    .id(UUID.randomUUID().toString())
                     .questionText("Which database is commonly built into mobile platforms for local structured storage?")
                     .optionA("MongoDB")
                     .optionB("Redis")
@@ -101,6 +106,7 @@ public class DataInitializer implements CommandLineRunner {
                     .build());
 
             quiz1.addQuestion(Question.builder()
+                    .id(UUID.randomUUID().toString())
                     .questionText("What widget is used for repeating list items efficiently with recycling in Flutter?")
                     .optionA("Column")
                     .optionB("ListView.builder")
@@ -111,6 +117,7 @@ public class DataInitializer implements CommandLineRunner {
                     .build());
 
             quiz1.addQuestion(Question.builder()
+                    .id(UUID.randomUUID().toString())
                     .questionText("What format are vector graphics usually saved as in Flutter?")
                     .optionA("SVG")
                     .optionB("PNG")
@@ -120,7 +127,6 @@ public class DataInitializer implements CommandLineRunner {
                     .explanation("SVG stands for Scalable Vector Graphics, providing resolution-independent images.")
                     .build());
 
-            // Quiz 2: Project Management & Agile
             QuizSet quiz2 = QuizSet.builder()
                     .title("Project Management Fundamentals")
                     .category("Project Management")
@@ -129,9 +135,11 @@ public class DataInitializer implements CommandLineRunner {
                     .timeLimitMinutes(10)
                     .totalQuestions(3)
                     .avgScore(90.0)
+                    .createdAt(LocalDateTime.now())
                     .build();
 
             quiz2.addQuestion(Question.builder()
+                    .id(UUID.randomUUID().toString())
                     .questionText("In Scrum, who is primarily responsible for maximizing the value of the product?")
                     .optionA("Scrum Master")
                     .optionB("Product Owner")
@@ -142,6 +150,7 @@ public class DataInitializer implements CommandLineRunner {
                     .build());
 
             quiz2.addQuestion(Question.builder()
+                    .id(UUID.randomUUID().toString())
                     .questionText("What is the timeboxed duration of a Daily Scrum meeting?")
                     .optionA("15 minutes")
                     .optionB("30 minutes")
@@ -152,6 +161,7 @@ public class DataInitializer implements CommandLineRunner {
                     .build());
 
             quiz2.addQuestion(Question.builder()
+                    .id(UUID.randomUUID().toString())
                     .questionText("Which chart is traditionally used to show remaining work in a sprint?")
                     .optionA("Gantt Chart")
                     .optionB("Sprint Burndown Chart")
@@ -162,7 +172,7 @@ public class DataInitializer implements CommandLineRunner {
                     .build());
 
             quizSetRepository.saveAll(List.of(quiz1, quiz2));
-            log.info("Demo data initialized successfully! 2 QuizSets, 8 Questions, and 1 User seeded.");
+            log.info("Demo data initialized successfully in MongoDB! 2 QuizSets, 8 Questions, and 1 User seeded.");
         }
     }
 }

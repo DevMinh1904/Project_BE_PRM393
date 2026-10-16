@@ -13,8 +13,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CreateNotificationRequest {
 
-    @NotNull(message = "User ID is required")
-    private Long userId;
+    @NotBlank(message = "User ID is required")
+    private String userId;
 
     @NotBlank(message = "Title is required")
     private String title;

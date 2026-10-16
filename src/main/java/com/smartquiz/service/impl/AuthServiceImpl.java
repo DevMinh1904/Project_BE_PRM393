@@ -31,7 +31,7 @@ public class AuthServiceImpl implements AuthService {
     private final EmailService emailService;
     private final JwtService jwtService;
 
-    private final SecureRandom secureRandom = new SecureRandom();
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     @Override
     @Transactional
@@ -98,7 +98,7 @@ public class AuthServiceImpl implements AuthService {
                 .message("Welcome " + savedUser.getFullName() + "! Your account has been registered and verified. Start learning today!")
                 .timestamp(LocalDateTime.now())
                 .isRead(false)
-                .user(savedUser)
+                .userId(savedUser.getId())
                 .build();
         notificationRepository.save(welcomeNotice);
 
@@ -110,7 +110,6 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request) {
         String email = request.getEmail().trim().toLowerCase();
         log.info("Attempting login for email: {}", email);
@@ -129,8 +128,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public UserResponse getUserProfile(Long userId) {
+    public UserResponse getUserProfile(String userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
         return UserResponse.builder()
@@ -144,7 +142,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private String generateNumericOtp() {
-        return String.format("%06d", secureRandom.nextInt(1_000_000));
+        return String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
     }
 
     private AuthResponse mapToAuthResponse(User user, String token) {

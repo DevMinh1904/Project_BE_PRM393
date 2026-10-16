@@ -16,7 +16,8 @@ public class OtpCleanupScheduler {
     private final OtpVerificationRepository otpVerificationRepository;
 
     /**
-     * Automatically purges expired OTP verification records from the database every day at midnight (00:00:00).
+     * Automatically purges expired OTP verification records from the database every
+     * day at midnight (00:00:00).
      */
     @Scheduled(cron = "0 0 0 * * ?")
     public void cleanupExpiredOtpsDaily() {
@@ -30,7 +31,8 @@ public class OtpCleanupScheduler {
     }
 
     /**
-     * Initial cleanup 10 seconds after server boot to purge any records expired during downtime.
+     * Initial cleanup 10 seconds after server boot to purge any records expired
+     * during downtime.
      */
     @Scheduled(initialDelay = 10000, fixedDelay = Long.MAX_VALUE)
     public void cleanupExpiredOtpsOnStartup() {

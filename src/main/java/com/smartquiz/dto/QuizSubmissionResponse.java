@@ -14,10 +14,10 @@ import java.util.List;
 @AllArgsConstructor
 public class QuizSubmissionResponse {
 
-    private Long submissionId;
-    private Long quizSetId;
+    private String submissionId;
+    private String quizSetId;
     private String quizTitle;
-    private Long userId;
+    private String userId;
     private Double scorePercentage;
     private Integer correctCount;
     private Integer totalQuestions;
@@ -30,7 +30,7 @@ public class QuizSubmissionResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class QuestionResult {
-        private Long questionId;
+        private String questionId;
         private String questionText;
         private String selectedAnswer;
         private String correctAnswer;
