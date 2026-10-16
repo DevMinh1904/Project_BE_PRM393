@@ -17,8 +17,6 @@ WORKDIR /app
 # Copy compiled JAR artifact
 COPY --from=build /app/target/smartquiz-backend-1.0.0.jar app.jar
 
-ENV PORT=8088
-EXPOSE 8088
 
 # Run Spring Boot application with container-aware memory limits
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom -jar app.jar"]
