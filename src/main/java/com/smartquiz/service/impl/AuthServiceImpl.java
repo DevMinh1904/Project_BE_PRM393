@@ -49,7 +49,7 @@ public class AuthServiceImpl implements AuthService {
                 .orElse(OtpVerification.builder().email(email).build());
 
         verification.setOtpCode(otp);
-        verification.setExpiryTime(LocalDateTime.now().plusMinutes(10));
+        verification.setExpiryTime(LocalDateTime.now().plusMinutes(5));
         otpVerificationRepository.save(verification);
 
         emailService.sendOtpEmail(email, "Prospective Learner", otp);

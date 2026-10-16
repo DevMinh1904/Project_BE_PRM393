@@ -25,7 +25,7 @@ public class EmailServiceImpl implements EmailService {
         log.info("📧 [SmartQuiz Email OTP Dispatcher]");
         log.info("Recipient: {} <{}>", fullName, toEmail);
         log.info("Your Registration OTP Code: >>> {} <<<", otpCode);
-        log.info("Expiration: 10 minutes");
+        log.info("Expiration: 5 minutes");
         log.info("==========================================================");
 
         if (mailSender == null) {
@@ -52,7 +52,7 @@ public class EmailServiceImpl implements EmailService {
                                 %s
                             </span>
                         </div>
-                        <p style="color: #6b7280; font-size: 14px;">This code will expire in <strong>10 minutes</strong>. If you did not initiate this request, please safely disregard this email.</p>
+                        <p style="color: #6b7280; font-size: 14px;">This code will expire in <strong>5 minutes</strong>. If you did not initiate this request, please safely disregard this email.</p>
                         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
                         <p style="color: #9ca3af; font-size: 12px; text-align: center;">SmartQuiz PRM393 &copy; 2026. All rights reserved.</p>
                     </div>
