@@ -4,16 +4,28 @@ const state = {
   userId: localStorage.getItem("smartquiz_userId") || ""
 };
 
-// Initialize badges on load
+// Global interactive quiz taking state
+let currentQuizState = {
+  quiz: null,
+  questions: [],
+  currentIndex: 0,
+  answers: {} // questionId -> "A" | "B" | "C" | "D"
+};
+
+// Initialize on DOM load
 document.addEventListener("DOMContentLoaded", () => {
   updateAuthUI();
   populateSampleQuizJson();
   if (state.userId) {
-    document.getElementById("profileUserId").value = state.userId;
-    document.getElementById("submitUserId").value = state.userId;
-    document.getElementById("notifUserId").value = state.userId;
-    document.getElementById("createNotifUserId").value = state.userId;
+    const profileEl = document.getElementById("profileUserId");
+    if (profileEl) profileEl.value = state.userId;
+    const notifEl = document.getElementById("notifUserId");
+    if (notifEl) notifEl.value = state.userId;
+    const createNotifEl = document.getElementById("createNotifUserId");
+    if (createNotifEl) createNotifEl.value = state.userId;
   }
+  // Automatically fetch quizzes on start so cards appear
+  getAllQuizzes();
 });
 
 function getBaseUrl() {
@@ -34,7 +46,7 @@ function updateAuthUI() {
   }
 
   if (state.userId) {
-    userBadge.textContent = "User #" + state.userId;
+    userBadge.textContent = "User: " + state.userId.substring(0, 8) + "...";
     userBadge.className = "badge badge-success";
   } else {
     userBadge.textContent = "Not Set";
@@ -50,10 +62,12 @@ function saveSession(token, userId) {
   if (userId) {
     state.userId = userId;
     localStorage.setItem("smartquiz_userId", userId);
-    document.getElementById("profileUserId").value = userId;
-    document.getElementById("submitUserId").value = userId;
-    document.getElementById("notifUserId").value = userId;
-    document.getElementById("createNotifUserId").value = userId;
+    const profileEl = document.getElementById("profileUserId");
+    if (profileEl) profileEl.value = userId;
+    const notifEl = document.getElementById("notifUserId");
+    if (notifEl) notifEl.value = userId;
+    const createNotifEl = document.getElementById("createNotifUserId");
+    if (createNotifEl) createNotifEl.value = userId;
   }
   updateAuthUI();
 }
@@ -109,7 +123,7 @@ function logResponse(method, endpoint, status, duration, data) {
 
 function escapeHtml(str) {
   if (!str) return "";
-  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 async function makeRequest(method, path, body = null, isFormData = false) {
@@ -215,7 +229,7 @@ async function getUserProfile() {
 }
 
 // -------------------------------------------------------------
-// TAB 2: QUIZZES APIs
+// TAB 2: QUIZZES, VISUAL LIBRARY & INTERACTIVE PLAYER
 // -------------------------------------------------------------
 
 async function getAllQuizzes() {
@@ -229,7 +243,69 @@ async function getAllQuizzes() {
   if (search) params.append("search", search);
 
   const queryStr = params.toString() ? `?${params.toString()}` : "";
-  await makeRequest("GET", `/api/quizzes${queryStr}`);
+  const result = await makeRequest("GET", `/api/quizzes${queryStr}`);
+
+  if (result.ok && result.data && Array.isArray(result.data.data)) {
+    renderQuizCards(result.data.data);
+  } else {
+    document.getElementById("quizCardsContainer").innerHTML = `
+      <div style="color: var(--danger); font-size: 0.9rem; padding: 12px 0;">
+        Failed to fetch quizzes or no quizzes found. Make sure backend is running.
+      </div>
+    `;
+  }
+}
+
+function renderQuizCards(quizzes) {
+  const container = document.getElementById("quizCardsContainer");
+  if (!quizzes || quizzes.length === 0) {
+    container.innerHTML = `
+      <div style="color: var(--text-muted); font-size: 0.9rem; padding: 12px 0;">
+        No quiz sets match your filter. You can import one using the form below!
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = quizzes.map(q => {
+    let diffBadgeClass = "badge";
+    if (q.difficulty === "EASY") diffBadgeClass = "badge badge-success";
+    else if (q.difficulty === "HARD") diffBadgeClass = "badge badge-danger";
+    else diffBadgeClass = "badge badge-warning";
+
+    return `
+      <div class="quiz-item-card">
+        <div class="quiz-item-info">
+          <h4>${escapeHtml(q.title)}</h4>
+          <div class="quiz-item-meta">
+            <span class="badge badge-success">${escapeHtml(q.category || "General")}</span>
+            <span class="${diffBadgeClass}">${escapeHtml(q.difficulty || "MEDIUM")}</span>
+            <span>📝 ${q.totalQuestions || 0} Questions</span>
+            <span>⏱️ ${q.timeLimitMinutes || 15} Mins</span>
+            <span>⭐ Avg: ${q.avgScore != null ? q.avgScore : 0}%</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; flex-shrink: 0;">
+          <button class="btn-success" onclick="startQuiz('${q.id}')">🚀 Take Quiz</button>
+          <button class="btn-sm btn-secondary" onclick="loadQuizToInspector('${q.id}')">Inspect</button>
+          <button class="btn-sm btn-danger" onclick="deleteQuizDirect('${q.id}')">🗑️</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function loadQuizToInspector(quizId) {
+  document.getElementById("detailQuizId").value = quizId;
+  getQuizById();
+}
+
+async function deleteQuizDirect(id) {
+  if (!confirm(`Are you sure you want to delete Quiz #${id}?`)) return;
+  const result = await makeRequest("DELETE", `/api/quizzes/${id}`);
+  if (result.ok) {
+    getAllQuizzes();
+  }
 }
 
 async function getQuizById() {
@@ -247,8 +323,217 @@ async function deleteQuiz() {
     alert("Please enter a Quiz ID.");
     return;
   }
-  if (!confirm(`Are you sure you want to delete Quiz #${id}?`)) return;
-  await makeRequest("DELETE", `/api/quizzes/${id}`);
+  await deleteQuizDirect(id);
+}
+
+// -------------------------------------------------------------
+// INTERACTIVE QUIZ TAKING ENGINE (1-by-1 Flow)
+// -------------------------------------------------------------
+
+async function startQuiz(quizId) {
+  // Fetch full quiz with all questions
+  const res = await makeRequest("GET", `/api/quizzes/${quizId}`);
+  if (!res.ok || !res.data || !res.data.data) {
+    alert("Could not load quiz questions. Check console.");
+    return;
+  }
+
+  const quiz = res.data.data;
+  if (!quiz.questions || quiz.questions.length === 0) {
+    alert("This quiz has no questions yet!");
+    return;
+  }
+
+  currentQuizState = {
+    quiz: quiz,
+    questions: quiz.questions,
+    currentIndex: 0,
+    answers: {}
+  };
+
+  // Hide library, show player
+  document.getElementById("quizLibrarySection").style.display = "none";
+  document.getElementById("quizResultsCard").style.display = "none";
+  document.getElementById("quizPlayerCard").style.display = "block";
+
+  // Scroll smoothly to player
+  document.getElementById("quizPlayerCard").scrollIntoView({ behavior: "smooth" });
+
+  renderCurrentQuestion();
+}
+
+function renderCurrentQuestion() {
+  const { quiz, questions, currentIndex, answers } = currentQuizState;
+  const total = questions.length;
+  const current = questions[currentIndex];
+
+  // Header info
+  document.getElementById("playerQuizTitle").textContent = quiz.title;
+  document.getElementById("playerQuizDesc").textContent = quiz.description || "Answer the questions to test your knowledge.";
+  document.getElementById("playerCategoryBadge").textContent = quiz.category || "General";
+  document.getElementById("playerDifficultyBadge").textContent = quiz.difficulty || "MEDIUM";
+
+  // Progress Bar
+  const progressPercent = Math.round(((currentIndex + 1) / total) * 100);
+  document.getElementById("playerProgressText").textContent = `Question ${currentIndex + 1} of ${total}`;
+  document.getElementById("playerPercentText").textContent = `${progressPercent}%`;
+  document.getElementById("playerProgressBar").style.width = `${progressPercent}%`;
+
+  // Question Text
+  document.getElementById("playerQuestionText").textContent = `${currentIndex + 1}. ${current.questionText}`;
+
+  // Options
+  const options = [
+    { letter: "A", text: current.optionA },
+    { letter: "B", text: current.optionB },
+    { letter: "C", text: current.optionC },
+    { letter: "D", text: current.optionD }
+  ].filter(opt => opt.text != null && String(opt.text).trim() !== "");
+
+  const selectedAnswer = answers[current.id] || "";
+  document.getElementById("playerSelectedAnswer").textContent = selectedAnswer ? `Option ${selectedAnswer}` : "None";
+
+  const optionsContainer = document.getElementById("playerOptionsContainer");
+  optionsContainer.innerHTML = options.map(opt => {
+    const isSelected = selectedAnswer === opt.letter;
+    return `
+      <div class="quiz-option-card ${isSelected ? 'selected' : ''}" onclick="selectQuizOption('${opt.letter}')">
+        <div class="option-letter">${opt.letter}</div>
+        <div style="flex:1;">${escapeHtml(opt.text)}</div>
+      </div>
+    `;
+  }).join("");
+
+  // Navigation Buttons
+  document.getElementById("playerPrevBtn").disabled = (currentIndex === 0);
+
+  const nextBtn = document.getElementById("playerNextBtn");
+  const submitBtn = document.getElementById("playerSubmitBtn");
+
+  if (currentIndex === total - 1) {
+    nextBtn.style.display = "none";
+    submitBtn.style.display = "inline-block";
+  } else {
+    nextBtn.style.display = "inline-block";
+    submitBtn.style.display = "none";
+  }
+}
+
+function selectQuizOption(letter) {
+  const { questions, currentIndex } = currentQuizState;
+  const current = questions[currentIndex];
+  currentQuizState.answers[current.id] = letter;
+  renderCurrentQuestion();
+}
+
+function nextQuestion() {
+  if (currentQuizState.currentIndex < currentQuizState.questions.length - 1) {
+    currentQuizState.currentIndex++;
+    renderCurrentQuestion();
+  }
+}
+
+function prevQuestion() {
+  if (currentQuizState.currentIndex > 0) {
+    currentQuizState.currentIndex--;
+    renderCurrentQuestion();
+  }
+}
+
+function exitQuizPlayer() {
+  if (confirm("Are you sure you want to exit? Your current progress will be lost.")) {
+    document.getElementById("quizPlayerCard").style.display = "none";
+    document.getElementById("quizLibrarySection").style.display = "block";
+  }
+}
+
+async function submitCurrentQuiz() {
+  const { quiz, questions, answers } = currentQuizState;
+
+  let activeUserId = state.userId;
+  if (!activeUserId) {
+    // If not logged in, prompt or fallback to demo user ID
+    activeUserId = prompt("Please enter your User ID to submit this quiz (or Log In first from Tab 1):", "6ad2575f3607e867926416b0");
+    if (!activeUserId) return;
+  }
+
+  const answeredCount = Object.keys(answers).length;
+  if (answeredCount < questions.length) {
+    if (!confirm(`You have answered ${answeredCount} of ${questions.length} questions. Are you sure you want to submit now?`)) {
+      return;
+    }
+  }
+
+  const payload = {
+    userId: activeUserId,
+    answers: answers
+  };
+
+  const res = await makeRequest("POST", `/api/quizzes/${quiz.id}/submit`, payload);
+  if (!res.ok || !res.data || !res.data.data) {
+    alert("Submission failed. Check API response log on the right.");
+    return;
+  }
+
+  showQuizResults(res.data.data);
+}
+
+function showQuizResults(result) {
+  // Hide player, show results view
+  document.getElementById("quizPlayerCard").style.display = "none";
+  document.getElementById("quizResultsCard").style.display = "block";
+  document.getElementById("quizResultsCard").scrollIntoView({ behavior: "smooth" });
+
+  const score = result.scorePercentage || 0;
+  const circle = document.getElementById("resultsScoreCircle");
+  circle.textContent = `${score}%`;
+  circle.style.background = score >= 70 ? "#16a34a" : (score >= 50 ? "#ea580c" : "#dc2626");
+
+  document.getElementById("resultsQuizTitle").textContent = result.quizTitle || currentQuizState.quiz.title;
+  document.getElementById("resultsSummaryText").textContent = `You scored ${score}% (${result.correctCount || 0} out of ${result.totalQuestions || 0} correct).`;
+  document.getElementById("resultsStreakText").textContent = `🔥 Current Learning Streak: ${result.updatedStreak != null ? result.updatedStreak : 1} Days`;
+
+  // Render question-by-question breakdown
+  const breakdownContainer = document.getElementById("resultsBreakdownContainer");
+  if (result.questionResults && result.questionResults.length > 0) {
+    breakdownContainer.innerHTML = result.questionResults.map((r, i) => {
+      const isCorrect = (r.isCorrect === true) || (r.correct === true) || (
+        Boolean(r.selectedAnswer && r.correctAnswer && r.selectedAnswer.toString().trim().toUpperCase() === r.correctAnswer.toString().trim().toUpperCase())
+      );
+      const statusIcon = isCorrect ? "✅ Correct" : "❌ Incorrect";
+      const cardClass = isCorrect ? "correct" : "wrong";
+
+      return `
+        <div class="breakdown-card ${cardClass}">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+            <strong>Question ${i + 1}: ${escapeHtml(r.questionText)}</strong>
+            <span class="badge ${isCorrect ? 'badge-success' : 'badge-danger'}">${statusIcon}</span>
+          </div>
+          <div style="font-size: 0.85rem; color: #334155; margin-bottom: 4px;">
+            <span>Your Choice: <strong>${r.selectedAnswer ? 'Option ' + r.selectedAnswer : 'Not Answered'}</strong></span>
+            ${!isCorrect ? ` &bull; <span style="color:#16a34a;">Correct Answer: <strong>Option ${r.correctAnswer}</strong></span>` : ''}
+          </div>
+          ${r.explanation ? `<div style="font-size: 0.82rem; color: #64748b; background: #fff; padding: 6px 10px; border-radius: 4px; border: 1px solid #e2e8f0; margin-top: 4px;">💡 <em>${escapeHtml(r.explanation)}</em></div>` : ''}
+        </div>
+      `;
+    }).join("");
+  } else {
+    breakdownContainer.innerHTML = "<div>No breakdown available.</div>";
+  }
+}
+
+function retakeCurrentQuiz() {
+  currentQuizState.currentIndex = 0;
+  currentQuizState.answers = {};
+  document.getElementById("quizResultsCard").style.display = "none";
+  document.getElementById("quizPlayerCard").style.display = "block";
+  renderCurrentQuestion();
+}
+
+function closeQuizResults() {
+  document.getElementById("quizResultsCard").style.display = "none";
+  document.getElementById("quizLibrarySection").style.display = "block";
+  getAllQuizzes();
 }
 
 async function importQuizFile() {
@@ -258,22 +543,50 @@ async function importQuizFile() {
     return;
   }
 
-  const formData = new FormData();
-  formData.append("file", fileInput.files[0]);
+  const uploadBtn = document.querySelector("#tab-quiz button.btn-success");
+  const origBtnText = uploadBtn ? uploadBtn.textContent : "Upload";
+  if (uploadBtn) {
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = "⏳ Uploading & Generating Options...";
+  }
 
-  const title = document.getElementById("importTitle").value.trim();
-  const category = document.getElementById("importCategory").value.trim();
-  const time = document.getElementById("importTime").value.trim();
-  const diff = document.getElementById("importDifficulty").value;
-  const desc = document.getElementById("importDesc").value.trim();
+  try {
+    const formData = new FormData();
+    formData.append("file", fileInput.files[0]);
 
-  if (title) formData.append("title", title);
-  if (category) formData.append("category", category);
-  if (time) formData.append("timeLimitMinutes", time);
-  if (diff) formData.append("difficulty", diff);
-  if (desc) formData.append("description", desc);
+    const title = document.getElementById("importTitle").value.trim();
+    const category = document.getElementById("importCategory").value.trim();
+    const time = document.getElementById("importTime").value.trim();
+    const diff = document.getElementById("importDifficulty").value;
+    const desc = document.getElementById("importDesc").value.trim();
 
-  await makeRequest("POST", "/api/quizzes/import", formData, true);
+    if (title) formData.append("title", title);
+    if (category) formData.append("category", category);
+    if (time) formData.append("timeLimitMinutes", time);
+    if (diff) formData.append("difficulty", diff);
+    if (desc) formData.append("description", desc);
+
+    const result = await makeRequest("POST", "/api/quizzes/import", formData, true);
+    if (result.ok && result.data && result.data.data) {
+      const importedQuiz = result.data.data;
+      alert(`🎉 Success! Quiz "${importedQuiz.title}" was imported with ${importedQuiz.totalQuestions} questions!\n\nOptions have been dynamically generated from the pooled answers. Scroll down to take your quiz!`);
+      fileInput.value = "";
+      document.getElementById("importTitle").value = "";
+      document.getElementById("importCategory").value = "";
+      document.getElementById("importDesc").value = "";
+      await getAllQuizzes();
+      const libraryEl = document.getElementById("quizLibrarySection");
+      if (libraryEl) libraryEl.scrollIntoView({ behavior: "smooth" });
+    } else {
+      const errMsg = (result.data && (result.data.message || result.data.error)) || (result.error && result.error.message) || "Import failed. Check console on the right.";
+      alert("❌ Import failed: " + errMsg);
+    }
+  } finally {
+    if (uploadBtn) {
+      uploadBtn.disabled = false;
+      uploadBtn.textContent = origBtnText;
+    }
+  }
 }
 
 function populateSampleQuizJson() {
@@ -304,7 +617,8 @@ function populateSampleQuizJson() {
       }
     ]
   };
-  document.getElementById("createQuizJson").value = JSON.stringify(sample, null, 2);
+  const jsonEl = document.getElementById("createQuizJson");
+  if (jsonEl) jsonEl.value = JSON.stringify(sample, null, 2);
 }
 
 async function createQuizManual() {
@@ -316,38 +630,10 @@ async function createQuizManual() {
     alert("Invalid JSON format in QuizSet editor: " + e.message);
     return;
   }
-  await makeRequest("POST", "/api/quizzes", parsed);
-}
-
-async function submitQuizAnswers() {
-  const quizId = document.getElementById("submitQuizId").value.trim();
-  const inputUserId = document.getElementById("submitUserId").value.trim();
-  const userId = inputUserId || state.userId;
-
-  if (!quizId) {
-    alert("Please enter a Quiz ID.");
-    return;
+  const result = await makeRequest("POST", "/api/quizzes", parsed);
+  if (result.ok) {
+    getAllQuizzes();
   }
-  if (!userId) {
-    alert("Please specify a User ID.");
-    return;
-  }
-
-  const rawAnswers = document.getElementById("submitAnswersJson").value;
-  let answersMap;
-  try {
-    answersMap = JSON.parse(rawAnswers);
-  } catch (e) {
-    alert("Invalid answers JSON: " + e.message);
-    return;
-  }
-
-  const payload = {
-    userId: userId,
-    answers: answersMap
-  };
-
-  await makeRequest("POST", `/api/quizzes/${quizId}/submit`, payload);
 }
 
 // -------------------------------------------------------------

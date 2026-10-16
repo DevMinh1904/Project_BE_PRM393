@@ -27,6 +27,8 @@ public class Question {
 
     private String correctAnswer; // "A", "B", "C", or "D"
 
+    private String correctAnswerText; // Original text of the correct answer (e.g. "Dart")
+
     private String explanation;
 
     @Builder.Default

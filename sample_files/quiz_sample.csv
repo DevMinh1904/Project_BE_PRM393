@@ -1,7 +1,8 @@
-Question,Option A,Option B,Option C,Option D,Correct Answer,Explanation
-What programming language is used for Flutter?,Dart,Kotlin,Java,Swift,A,Flutter uses Dart
-What state management package is recommended by Google?,Provider,Redux,MobX,Zustand,A,Provider is officially recommended
-Which database is built into Flutter for local storage?,SQLite,Realm,MongoDB,PostgreSQL,A,SQLite is standard for local mobile databases
-What widget is used for repeating list items efficiently?,ListView.builder,Column,Row,GridView,A,ListView.builder renders visible items lazily
-What format are vector graphics usually saved as in Flutter?,SVG,PNG,JPG,GIF,A,SVG provides vector scalability
-What is the lifecycle method called when a StatefulWidget is inserted into tree?,initState,build,dispose,setState,A,initState is called first
+Question,Correct Answer
+What programming language is used for Flutter?,Dart
+What state management package is recommended by Google?,Provider
+Which database is built into Flutter for local storage?,SQLite
+What widget is used for repeating list items efficiently?,ListView.builder
+What format are vector graphics usually saved as in Flutter?,SVG
+What lifecycle method is called when a StatefulWidget is inserted into tree?,initState
+What widget arranges children in a vertical array?,Column

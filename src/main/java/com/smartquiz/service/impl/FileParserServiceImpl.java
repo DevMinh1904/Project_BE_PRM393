@@ -17,6 +17,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -44,7 +45,7 @@ public class FileParserServiceImpl implements FileParserService {
     }
 
     private List<Question> parseExcel(MultipartFile file) {
-        List<Question> questions = new ArrayList<>();
+        List<List<String>> rawRows = new ArrayList<>();
         DataFormatter dataFormatter = new DataFormatter();
 
         try (InputStream inputStream = file.getInputStream();
@@ -57,6 +58,7 @@ public class FileParserServiceImpl implements FileParserService {
 
             int firstRowNum = sheet.getFirstRowNum();
             int lastRowNum = sheet.getLastRowNum();
+            boolean firstRowProcessed = false;
 
             for (int r = firstRowNum; r <= lastRowNum; r++) {
                 Row row = sheet.getRow(r);
@@ -86,15 +88,15 @@ public class FileParserServiceImpl implements FileParserService {
                     continue;
                 }
 
-                // Skip header row if detected
-                if (isHeaderRow(cellValues)) {
-                    continue;
+                // Only the very first non-empty row can be evaluated as a header
+                if (!firstRowProcessed) {
+                    firstRowProcessed = true;
+                    if (isHeaderRow(cellValues)) {
+                        continue;
+                    }
                 }
 
-                Question question = buildQuestionFromRow(cellValues);
-                if (question != null) {
-                    questions.add(question);
-                }
+                rawRows.add(cellValues);
             }
 
         } catch (Exception e) {
@@ -102,15 +104,12 @@ public class FileParserServiceImpl implements FileParserService {
             throw new BadRequestException("Failed to parse Excel file: " + e.getMessage());
         }
 
-        if (questions.isEmpty()) {
-            throw new BadRequestException("No valid questions found in the uploaded Excel file.");
-        }
-
-        return questions;
+        return processRawRows(rawRows, "Excel");
     }
 
     private List<Question> parseCsv(MultipartFile file) {
-        List<Question> questions = new ArrayList<>();
+        List<List<String>> rawRows = new ArrayList<>();
+        boolean firstRowProcessed = false;
 
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8));
              CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.builder().setIgnoreSurroundingSpaces(true).build())) {
@@ -125,14 +124,15 @@ public class FileParserServiceImpl implements FileParserService {
                     continue;
                 }
 
-                if (isHeaderRow(values)) {
-                    continue;
+                // Only the very first non-empty row can be evaluated as a header
+                if (!firstRowProcessed) {
+                    firstRowProcessed = true;
+                    if (isHeaderRow(values)) {
+                        continue;
+                    }
                 }
 
-                Question question = buildQuestionFromRow(values);
-                if (question != null) {
-                    questions.add(question);
-                }
+                rawRows.add(values);
             }
 
         } catch (Exception e) {
@@ -140,96 +140,212 @@ public class FileParserServiceImpl implements FileParserService {
             throw new BadRequestException("Failed to parse CSV file: " + e.getMessage());
         }
 
-        if (questions.isEmpty()) {
-            throw new BadRequestException("No valid questions found in the uploaded CSV file.");
+        return processRawRows(rawRows, "CSV");
+    }
+
+    private boolean isHeaderRow(List<String> values) {
+        if (values.isEmpty()) return true;
+        String first = values.get(0).trim().toLowerCase();
+        String second = values.size() > 1 ? values.get(1).trim().toLowerCase() : "";
+
+        return first.equals("row") || first.equals("stt") || first.equals("#") ||
+               first.contains("question") || first.startsWith("a (") ||
+               second.contains("question") || second.contains("answer") ||
+               second.startsWith("b (");
+    }
+
+    private List<Question> processRawRows(List<List<String>> rawRows, String fileType) {
+        if (rawRows.isEmpty()) {
+            throw new BadRequestException("No valid question rows found in the uploaded " + fileType + " file.");
+        }
+
+        // Clean trailing empty cells
+        List<List<String>> cleanedRows = new ArrayList<>();
+        for (List<String> r : rawRows) {
+            List<String> rowCopy = new ArrayList<>(r);
+            while (!rowCopy.isEmpty() && rowCopy.get(rowCopy.size() - 1).isEmpty()) {
+                rowCopy.remove(rowCopy.size() - 1);
+            }
+            if (!rowCopy.isEmpty()) {
+                cleanedRows.add(rowCopy);
+            }
+        }
+
+        if (cleanedRows.isEmpty()) {
+            throw new BadRequestException("No valid data rows found in the uploaded " + fileType + " file.");
+        }
+
+        // Check if rows represent 2-column Q&A format (or 3-column with row counter in col 0)
+        boolean isQaFormat = cleanedRows.stream().allMatch(row -> {
+            int len = row.size();
+            if (len == 2) return true;
+            if (len == 3 && row.get(0).matches("^\\d+$")) return true;
+            return false;
+        });
+
+        if (isQaFormat) {
+            return processQaFormat(cleanedRows);
+        } else {
+            return processStandardMultipleChoice(cleanedRows);
+        }
+    }
+
+    /**
+     * Handles Q&A format where user only inputs Question and Correct Answer (Columns A & B, or Row # in Col A, Question in Col B, Answer in Col C).
+     * Collects all correct answers across the file as an answer pool,
+     * and for each question, randomly picks 3 distractors from the pool + 1 correct answer,
+     * shuffling the 4 options across A, B, C, D.
+     */
+    private List<Question> processQaFormat(List<List<String>> rows) {
+        record RawItem(String question, String answer) {}
+        List<RawItem> rawItems = new ArrayList<>();
+
+        for (List<String> row : rows) {
+            int startIndex = 0;
+            if (row.size() >= 3 && row.get(0).matches("^\\d+$")) {
+                startIndex = 1;
+            }
+            if (row.size() > startIndex + 1) {
+                String q = row.get(startIndex).trim();
+                String a = row.get(startIndex + 1).trim();
+                if (!q.isEmpty() && !a.isEmpty()) {
+                    rawItems.add(new RawItem(q, a));
+                }
+            }
+        }
+
+        if (rawItems.isEmpty()) {
+            throw new BadRequestException("Could not extract any Question and Answer pairs from file.");
+        }
+
+        // Distinct pool of all correct answers
+        List<String> allAnswers = rawItems.stream()
+                .map(RawItem::answer)
+                .distinct()
+                .collect(Collectors.toList());
+
+        List<Question> questions = new ArrayList<>();
+        java.security.SecureRandom random = new java.security.SecureRandom();
+
+        for (RawItem item : rawItems) {
+            String target = item.answer();
+
+            // Candidate distractors: other distinct answers in the pool
+            List<String> distractors = allAnswers.stream()
+                    .filter(a -> !a.equalsIgnoreCase(target))
+                    .collect(Collectors.toCollection(ArrayList::new));
+
+            java.util.Collections.shuffle(distractors, random);
+
+            List<String> chosenDistractors = new ArrayList<>();
+            for (String d : distractors) {
+                if (chosenDistractors.size() >= 3) break;
+                chosenDistractors.add(d);
+            }
+
+            // Fallback distractors only if the pool has fewer than 4 total questions
+            List<String> fallbacks = List.of("None of the above", "All of the above", "Not applicable");
+            for (String fb : fallbacks) {
+                if (chosenDistractors.size() >= 3) break;
+                if (!chosenDistractors.contains(fb) && !target.equalsIgnoreCase(fb)) {
+                    chosenDistractors.add(fb);
+                }
+            }
+
+            // Assemble the 4 options: 1 correct answer + 3 distractors
+            List<String> options = new ArrayList<>();
+            options.add(target);
+            options.addAll(chosenDistractors);
+
+            // Shuffle options so the correct answer is not always Option A
+            java.util.Collections.shuffle(options, random);
+
+            // Determine which letter received the correct answer
+            int correctIndex = -1;
+            for (int i = 0; i < options.size(); i++) {
+                if (options.get(i).equalsIgnoreCase(target)) {
+                    correctIndex = i;
+                    break;
+                }
+            }
+
+            String correctLetter = switch (correctIndex) {
+                case 0 -> "A";
+                case 1 -> "B";
+                case 2 -> "C";
+                case 3 -> "D";
+                default -> "A";
+            };
+
+            Question question = Question.builder()
+                    .id(java.util.UUID.randomUUID().toString())
+                    .questionText(item.question())
+                    .optionA(options.size() > 0 ? options.get(0) : "Option A")
+                    .optionB(options.size() > 1 ? options.get(1) : "Option B")
+                    .optionC(options.size() > 2 ? options.get(2) : null)
+                    .optionD(options.size() > 3 ? options.get(3) : null)
+                    .correctAnswer(correctLetter)
+                    .correctAnswerText(target)
+                    .explanation("Correct answer: " + target)
+                    .build();
+
+            questions.add(question);
         }
 
         return questions;
     }
 
-    private boolean isHeaderRow(List<String> values) {
-        if (values.isEmpty()) return true;
-        String first = values.get(0).toLowerCase();
-        String second = values.size() > 1 ? values.get(1).toLowerCase() : "";
-
-        return first.contains("question") || first.contains("row") || first.contains("stt") ||
-               first.contains("#") || second.contains("question") || second.contains("answer");
-    }
-
-    private Question buildQuestionFromRow(List<String> values) {
-        // Remove trailing empty elements
-        while (!values.isEmpty() && values.get(values.size() - 1).isEmpty()) {
-            values.remove(values.size() - 1);
-        }
-
-        if (values.isEmpty()) return null;
-
-        // Check if first column is just a row index (e.g., 1, 2, 3...)
-        int startIndex = 0;
-        if (values.get(0).matches("^\\d+$") && values.size() >= 3) {
-            // First column is row counter
-            startIndex = 1;
-        }
-
-        List<String> relevant = values.subList(startIndex, values.size());
-        if (relevant.isEmpty()) return null;
-
-        String questionText = relevant.get(0);
-        if (questionText.isBlank()) return null;
-
-        String optionA = "";
-        String optionB = "";
-        String optionC = "";
-        String optionD = "";
-        String rawCorrect = "";
-        String explanation = "";
-
-        if (relevant.size() >= 6) {
-            // Standard Multiple Choice format:
-            // Col 0: Question | Col 1: Opt A | Col 2: Opt B | Col 3: Opt C | Col 4: Opt D | Col 5: Correct Answer | Col 6 (optional): Explanation
-            optionA = relevant.size() > 1 ? relevant.get(1) : "";
-            optionB = relevant.size() > 2 ? relevant.get(2) : "";
-            optionC = relevant.size() > 3 ? relevant.get(3) : "";
-            optionD = relevant.size() > 4 ? relevant.get(4) : "";
-            rawCorrect = relevant.size() > 5 ? relevant.get(5) : "A";
-            explanation = relevant.size() > 6 ? relevant.get(6) : "";
-        } else if (relevant.size() == 2) {
-            // Flashcard / Q&A format (Question, Correct Answer) like in the screenshot
-            rawCorrect = relevant.get(1);
-            optionA = rawCorrect;
-            optionB = "None of the above";
-            optionC = "Both A and B";
-            optionD = "Not applicable";
-            explanation = "Correct answer: " + rawCorrect;
-        } else if (relevant.size() >= 3) {
-            // Question + 2 options + answer, etc.
-            optionA = relevant.get(1);
-            optionB = relevant.get(2);
-            if (relevant.size() >= 4) {
-                rawCorrect = relevant.get(3);
-            } else {
-                rawCorrect = "A";
+    private List<Question> processStandardMultipleChoice(List<List<String>> rows) {
+        List<Question> questions = new ArrayList<>();
+        for (List<String> row : rows) {
+            int startIndex = 0;
+            if (row.get(0).matches("^\\d+$") && row.size() >= 3) {
+                startIndex = 1;
             }
+
+            List<String> relevant = row.subList(startIndex, row.size());
+            if (relevant.isEmpty()) continue;
+
+            String questionText = relevant.get(0);
+            if (questionText.isBlank()) continue;
+
+            String optionA = relevant.size() > 1 ? relevant.get(1) : "Option A";
+            String optionB = relevant.size() > 2 ? relevant.get(2) : "Option B";
+            String optionC = relevant.size() > 3 ? relevant.get(3) : null;
+            String optionD = relevant.size() > 4 ? relevant.get(4) : null;
+            String rawCorrect = relevant.size() > 5 ? relevant.get(5) : "A";
+            String explanation = relevant.size() > 6 ? relevant.get(6) : null;
+
+            String normalizedCorrect = normalizeCorrectAnswer(rawCorrect, optionA, optionB, optionC, optionD);
+            String correctText = switch (normalizedCorrect) {
+                case "B" -> optionB;
+                case "C" -> optionC;
+                case "D" -> optionD;
+                default -> optionA;
+            };
+
+            Question question = Question.builder()
+                    .id(java.util.UUID.randomUUID().toString())
+                    .questionText(questionText)
+                    .optionA(optionA)
+                    .optionB(optionB)
+                    .optionC(optionC)
+                    .optionD(optionD)
+                    .correctAnswer(normalizedCorrect)
+                    .correctAnswerText(correctText)
+                    .explanation((explanation != null && !explanation.isBlank()) ? explanation : "Correct answer: " + correctText)
+                    .build();
+
+            questions.add(question);
         }
 
-        String normalizedCorrect = normalizeCorrectAnswer(rawCorrect, optionA, optionB, optionC, optionD);
-
-        return Question.builder()
-                .questionText(questionText)
-                .optionA(optionA.isBlank() ? "Option A" : optionA)
-                .optionB(optionB.isBlank() ? "Option B" : optionB)
-                .optionC(optionC.isBlank() ? null : optionC)
-                .optionD(optionD.isBlank() ? null : optionD)
-                .correctAnswer(normalizedCorrect)
-                .explanation(explanation.isBlank() ? null : explanation)
-                .build();
+        return questions;
     }
 
     private String normalizeCorrectAnswer(String raw, String optA, String optB, String optC, String optD) {
         if (raw == null || raw.isBlank()) return "A";
         String trimmed = raw.trim();
 
-        // If it's already "A", "B", "C", "D"
         if (trimmed.equalsIgnoreCase("A") || trimmed.equalsIgnoreCase("Option A") || trimmed.equals("1")) {
             return "A";
         }
@@ -243,11 +359,10 @@ public class FileParserServiceImpl implements FileParserService {
             return "D";
         }
 
-        // Check if value matches the text of one of the options
-        if (trimmed.equalsIgnoreCase(optA)) return "A";
-        if (trimmed.equalsIgnoreCase(optB)) return "B";
-        if (trimmed.equalsIgnoreCase(optC)) return "C";
-        if (trimmed.equalsIgnoreCase(optD)) return "D";
+        if (optA != null && trimmed.equalsIgnoreCase(optA)) return "A";
+        if (optB != null && trimmed.equalsIgnoreCase(optB)) return "B";
+        if (optC != null && trimmed.equalsIgnoreCase(optC)) return "C";
+        if (optD != null && trimmed.equalsIgnoreCase(optD)) return "D";
 
         return "A";
     }

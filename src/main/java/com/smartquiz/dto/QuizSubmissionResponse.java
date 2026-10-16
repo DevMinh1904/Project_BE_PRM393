@@ -1,5 +1,6 @@
 package com.smartquiz.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -34,7 +35,20 @@ public class QuizSubmissionResponse {
         private String questionText;
         private String selectedAnswer;
         private String correctAnswer;
+
+        @JsonProperty("isCorrect")
         private boolean isCorrect;
+
+        @JsonProperty("isCorrect")
+        public boolean isCorrect() {
+            return isCorrect;
+        }
+
+        @JsonProperty("isCorrect")
+        public void setCorrect(boolean isCorrect) {
+            this.isCorrect = isCorrect;
+        }
+
         private String explanation;
     }
 }

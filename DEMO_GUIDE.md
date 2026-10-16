@@ -94,11 +94,11 @@ Follow this structured flow during your demo to impress your team:
 2. **Fetch Quizzes (`GET /api/quizzes`):**
    - Click **Fetch Quizzes** to display all available quizzes.
    - Test the filters (e.g. Difficulty = `MEDIUM`, Search = `Flutter`).
-3. **Import Quiz from Excel (`POST /api/quizzes/import`):**
-   - Under *Import Quiz*, click **Choose File** and select `sample_files/flutter_quiz_sample.xlsx` (or `sample_files/quiz_sample.csv`).
+3. **Smart Option Generation via Excel/CSV (`POST /api/quizzes/import`):**
+   - Under *Import Quiz*, click **Choose File** and select `sample_files/quiz_sample.csv` (or any 2-column spreadsheet).
    - Click **📤 Upload & Import**.
-   - Show the response: Apache POI parsed the spreadsheet and created a complete QuizSet with all questions in MongoDB.
-   - Switch back to **MongoDB Compass**, click the refresh icon, and show your team the new quiz document!
+   - *Key Talking Point:* **"Teachers and students don't need to manually craft 4 choices for every question! They just upload a simple 2-column sheet: Question and Correct Answer. The backend automatically pools all correct answers across the quiz, picks 3 random distractors from the pool, and shuffles the 4 options into random slots (A, B, C, D) for every single question!"**
+   - Switch back to **MongoDB Compass**, click refresh, and show your team how the new questions each have 4 distinct, topic-relevant options automatically generated!
 
 ---
 

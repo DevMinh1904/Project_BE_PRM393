@@ -166,7 +166,34 @@ public class QuizServiceImpl implements QuizService {
 
         for (Question question : questions) {
             String selected = userAnswers.get(question.getId());
-            boolean isCorrect = selected != null && selected.trim().equalsIgnoreCase(question.getCorrectAnswer());
+            boolean isCorrect = false;
+
+            if (selected != null && !selected.isBlank()) {
+                String sel = selected.trim();
+                // 1. Direct letter match (e.g., "A", "B", "C", "D")
+                if (sel.equalsIgnoreCase(question.getCorrectAnswer())) {
+                    isCorrect = true;
+                }
+                // 2. Direct text match with correctAnswerText (e.g., "Dart")
+                else if (question.getCorrectAnswerText() != null && sel.equalsIgnoreCase(question.getCorrectAnswerText().trim())) {
+                    isCorrect = true;
+                }
+                // 3. User submitted letter, check if that option's text equals correctAnswerText
+                else {
+                    String chosenOptionText = switch (sel.toUpperCase()) {
+                        case "A" -> question.getOptionA();
+                        case "B" -> question.getOptionB();
+                        case "C" -> question.getOptionC();
+                        case "D" -> question.getOptionD();
+                        default -> null;
+                    };
+                    if (chosenOptionText != null && question.getCorrectAnswerText() != null &&
+                            chosenOptionText.trim().equalsIgnoreCase(question.getCorrectAnswerText().trim())) {
+                        isCorrect = true;
+                    }
+                }
+            }
+
             if (isCorrect) {
                 correctCount++;
             }
@@ -281,6 +308,7 @@ public class QuizServiceImpl implements QuizService {
                 .optionC(q.getOptionC())
                 .optionD(q.getOptionD())
                 .correctAnswer(q.getCorrectAnswer())
+                .correctAnswerText(q.getCorrectAnswerText())
                 .explanation(q.getExplanation())
                 .build();
     }

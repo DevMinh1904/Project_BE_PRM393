@@ -53,6 +53,7 @@
     }
     .badge-success { background: #dcfce7; color: #15803d; }
     .badge-warning { background: #fef3c7; color: #b45309; }
+    .badge-danger { background: #fee2e2; color: #b91c1c; }
 
     .layout {
       display: grid;
@@ -117,6 +118,100 @@
     button.btn-success { background: var(--success); }
     button.btn-success:hover { background: #15803d; }
     button.btn-sm { padding: 4px 8px; font-size: 0.8rem; }
+
+    /* Interactive Quiz UI Elements */
+    .quiz-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .quiz-item-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      background: #fff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      transition: all 0.15s ease;
+    }
+    .quiz-item-card:hover {
+      box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+      border-color: #94a3b8;
+    }
+    .quiz-item-info h4 {
+      font-size: 1rem;
+      color: #1e293b;
+      margin-bottom: 4px;
+    }
+    .quiz-item-meta {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .quiz-option-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 0.92rem;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .quiz-option-card:hover {
+      border-color: var(--primary);
+      background: #f8fafc;
+    }
+    .quiz-option-card.selected {
+      border-color: var(--primary);
+      background: #eff6ff;
+      font-weight: 600;
+      color: #1e40af;
+    }
+    .option-letter {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: #334155;
+      flex-shrink: 0;
+      font-size: 0.85rem;
+    }
+    .quiz-option-card.selected .option-letter {
+      background: var(--primary);
+      color: #fff;
+    }
+    .breakdown-card {
+      background: #fff;
+      padding: 12px 14px;
+      border-radius: 6px;
+      border-left: 4px solid #cbd5e1;
+      font-size: 0.88rem;
+      border-top: 1px solid #e2e8f0;
+      border-right: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .breakdown-card.correct {
+      border-left-color: #16a34a;
+      background: #f0fdf4;
+    }
+    .breakdown-card.wrong {
+      border-left-color: #dc2626;
+      background: #fef2f2;
+    }
 
     /* Response Console */
     .console-container {
@@ -218,7 +313,7 @@
     <div>
       <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('tab-auth')">1. Auth & Profile</button>
-        <button class="tab-btn" onclick="switchTab('tab-quiz')">2. Quizzes & Import</button>
+        <button class="tab-btn" onclick="switchTab('tab-quiz')">2. Quizzes & Player</button>
         <button class="tab-btn" onclick="switchTab('tab-notif')">3. Notifications</button>
       </div>
 
@@ -293,18 +388,103 @@
         </div>
       </div>
 
-      <!-- TAB 2: QUIZZES -->
+      <!-- TAB 2: QUIZZES & INTERACTIVE PLAYER -->
       <div id="tab-quiz" class="tab-content">
-        <!-- 1. Get All Quizzes -->
-        <div class="card">
-          <h2>1. Get All Quizzes (Library / Filter)</h2>
-          <p class="subtitle" style="margin-bottom:8px;">Endpoint: <code>GET /api/quizzes</code></p>
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
-            <div class="form-group">
-              <label>Category:</label>
-              <input type="text" id="quizFilterCat" placeholder="e.g. Mobile" />
+
+        <!-- INTERACTIVE QUIZ PLAYER (Shown when user takes a quiz) -->
+        <div class="card" id="quizPlayerCard" style="display: none; border: 2px solid var(--primary); background: #f0f7ff;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+            <div>
+              <span id="playerCategoryBadge" class="badge badge-success">Category</span>
+              <span id="playerDifficultyBadge" class="badge">MEDIUM</span>
+              <h2 id="playerQuizTitle" style="margin-top: 6px; margin-bottom: 2px; color: #1e3a8a; border:none; padding:0;">Quiz Title</h2>
+              <div id="playerQuizDesc" class="subtitle">Quiz description...</div>
             </div>
-            <div class="form-group">
+            <button class="btn-sm btn-danger" onclick="exitQuizPlayer()">Exit Quiz ✕</button>
+          </div>
+
+          <!-- Progress Bar -->
+          <div style="margin: 14px 0;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 4px;">
+              <span id="playerProgressText">Question 1 of 5</span>
+              <span id="playerPercentText">20%</span>
+            </div>
+            <div style="background: #cbd5e1; height: 8px; border-radius: 4px; overflow: hidden;">
+              <div id="playerProgressBar" style="background: var(--primary); height: 100%; width: 20%; transition: width 0.2s ease;"></div>
+            </div>
+          </div>
+
+          <!-- Question Body -->
+          <div style="background: #fff; padding: 16px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 16px;">
+            <div id="playerQuestionText" style="font-size: 1.05rem; font-weight: 600; color: #0f172a; margin-bottom: 14px;">
+              Question text
+            </div>
+
+            <!-- Options Container -->
+            <div id="playerOptionsContainer" style="display: flex; flex-direction: column; gap: 10px;">
+              <!-- Options A, B, C, D will be dynamically rendered here -->
+            </div>
+          </div>
+
+          <!-- Navigation Controls -->
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <button id="playerPrevBtn" class="btn-secondary" onclick="prevQuestion()" disabled>⬅ Previous</button>
+            <div id="playerAnswerIndicator" style="font-size: 0.85rem; font-weight: 600; color: #475569;">
+              Selected: <span id="playerSelectedAnswer" style="color: var(--primary);">None</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button id="playerNextBtn" class="btn-primary" onclick="nextQuestion()">Next ➡</button>
+              <button id="playerSubmitBtn" class="btn-success" onclick="submitCurrentQuiz()" style="display: none;">🎯 Submit Quiz & See Score</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- QUIZ RESULTS VIEW (Shown after submission) -->
+        <div class="card" id="quizResultsCard" style="display: none; border: 2px solid var(--success); background: #f0fdf4;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <h2 style="color: #166534; border:none; padding:0; margin:0;">🎉 Quiz Results & Evaluation</h2>
+            <button class="btn-sm btn-secondary" onclick="closeQuizResults()">Back to Library ✕</button>
+          </div>
+
+          <!-- Score Card Overview -->
+          <div style="display: flex; align-items: center; gap: 20px; background: #fff; padding: 16px; border-radius: 8px; border: 1px solid #bbf7d0; margin-bottom: 16px;">
+            <div id="resultsScoreCircle" style="width: 75px; height: 75px; border-radius: 50%; background: #16a34a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; font-weight: bold; flex-shrink: 0;">
+              100%
+            </div>
+            <div>
+              <h3 id="resultsQuizTitle" style="font-size: 1.1rem; color: #0f172a;">Quiz Title</h3>
+              <div id="resultsSummaryText" style="font-size: 0.92rem; color: #374151; margin-top: 3px;">You answered 4 out of 5 questions correctly.</div>
+              <div id="resultsStreakText" style="font-size: 0.9rem; font-weight: 600; color: #ea580c; margin-top: 6px;">🔥 Current Streak: 6 Days</div>
+            </div>
+          </div>
+
+          <!-- Question Breakdown -->
+          <h3 style="font-size: 0.95rem; color: #1e293b; margin-bottom: 8px;">Question Breakdown & Explanations:</h3>
+          <div id="resultsBreakdownContainer" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
+            <!-- Breakdown entries injected dynamically -->
+          </div>
+
+          <div class="btn-row">
+            <button class="btn-primary" onclick="retakeCurrentQuiz()">🔄 Retake This Quiz</button>
+            <button class="btn-secondary" onclick="closeQuizResults()">📚 Back to Quiz Library</button>
+          </div>
+        </div>
+
+        <!-- 1. Interactive Quiz Library List -->
+        <div class="card" id="quizLibrarySection">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <h2 style="margin:0; border:none; padding:0;">📚 Available Quiz Sets</h2>
+            <button class="btn-sm btn-secondary" onclick="getAllQuizzes()">🔄 Refresh List</button>
+          </div>
+          <p class="subtitle" style="margin-bottom:12px;">Browse quiz sets below. Click <strong>"🚀 Take Quiz"</strong> to take the quiz question-by-question.</p>
+
+          <!-- Filters -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label>Category:</label>
+              <input type="text" id="quizFilterCat" placeholder="Filter category..." />
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
               <label>Difficulty:</label>
               <select id="quizFilterDiff">
                 <option value="">All</option>
@@ -313,38 +493,31 @@
                 <option value="HARD">HARD</option>
               </select>
             </div>
-            <div class="form-group">
+            <div class="form-group" style="margin-bottom:0;">
               <label>Search:</label>
               <input type="text" id="quizFilterSearch" placeholder="Search keyword..." />
             </div>
           </div>
-          <div class="btn-row">
-            <button onclick="getAllQuizzes()">Fetch Quizzes</button>
+          <button class="btn-sm btn-primary" onclick="getAllQuizzes()" style="margin-bottom: 12px;">Apply Filter</button>
+
+          <!-- Cards Container -->
+          <div id="quizCardsContainer" class="quiz-grid">
+            <div style="color: var(--text-muted); font-size: 0.9rem; padding: 12px 0;">
+              Loading quizzes from MongoDB...
+            </div>
           </div>
         </div>
 
-        <!-- 2. Get Quiz by ID -->
+        <!-- 2. Import Quiz via Excel/CSV -->
         <div class="card">
-          <h2>2. Get Quiz Details & Questions</h2>
-          <p class="subtitle" style="margin-bottom:8px;">Endpoint: <code>GET /api/quizzes/{id}</code></p>
-          <div class="form-group">
-            <label>Quiz ID:</label>
-            <input type="text" id="detailQuizId" placeholder="Quiz ID" />
-          </div>
-          <div class="btn-row">
-            <button class="btn-secondary" onclick="getQuizById()">Fetch Quiz & Questions</button>
-            <button class="btn-danger" onclick="deleteQuiz()">Delete Quiz</button>
-          </div>
-        </div>
-
-        <!-- 3. Import Quiz via Excel/CSV -->
-        <div class="card">
-          <h2>3. Import Quiz from Excel (.xlsx) or CSV</h2>
+          <h2>2. Import Quiz from Excel (.xlsx) or CSV</h2>
           <p class="subtitle" style="margin-bottom:8px;">Endpoint: <code>POST /api/quizzes/import</code> (Multipart Form Data)</p>
           <div class="form-group">
             <label>Select File (.xlsx, .xls, .csv):</label>
             <input type="file" id="importFile" accept=".xlsx,.xls,.csv" />
-            <small style="color:var(--text-muted);">You can use the files in <code>sample_files/flutter_quiz_sample.xlsx</code> or <code>quiz_sample.csv</code></small>
+            <small style="color:var(--text-muted); display:block; margin-top:4px;">
+              ✨ <strong>Smart Option Generation:</strong> You only need 2 columns: <code>Question</code> and <code>Correct Answer</code> (or with Row #). The system automatically pools all answers and generates 3 random options + 1 correct answer for each question!
+            </small>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
             <div class="form-group">
@@ -373,17 +546,17 @@
             <input type="text" id="importDesc" placeholder="Brief overview of quiz" />
           </div>
           <div class="btn-row">
-            <button class="btn-success" onclick="importQuizFile()">📤 Upload & Import</button>
+            <button class="btn-success" onclick="importQuizFile()">📤 Upload & Import to MongoDB</button>
           </div>
         </div>
 
-        <!-- 4. Create Quiz Manually (JSON) -->
+        <!-- 3. Create Quiz Manually (JSON) -->
         <div class="card">
-          <h2>4. Create Quiz Set Manually (JSON)</h2>
+          <h2>3. Create Quiz Set Manually (JSON)</h2>
           <p class="subtitle" style="margin-bottom:8px;">Endpoint: <code>POST /api/quizzes</code></p>
           <div class="form-group">
             <label>QuizSet JSON with Questions:</label>
-            <textarea id="createQuizJson" rows="7"></textarea>
+            <textarea id="createQuizJson" rows="6"></textarea>
           </div>
           <div class="btn-row">
             <button class="btn-secondary btn-sm" onclick="populateSampleQuizJson()">Load Sample JSON</button>
@@ -391,24 +564,17 @@
           </div>
         </div>
 
-        <!-- 5. Submit Quiz Answers -->
+        <!-- 4. Raw API Quiz Details / Delete -->
         <div class="card">
-          <h2>5. Submit Quiz Answers & Calculate Score</h2>
-          <p class="subtitle" style="margin-bottom:8px;">Endpoint: <code>POST /api/quizzes/{id}/submit</code></p>
+          <h2>4. Raw Quiz Inspector & Delete</h2>
+          <p class="subtitle" style="margin-bottom:8px;">Endpoint: <code>GET /api/quizzes/{id}</code> & <code>DELETE /api/quizzes/{id}</code></p>
           <div class="form-group">
             <label>Quiz ID:</label>
-            <input type="text" id="submitQuizId" placeholder="Quiz ID" />
-          </div>
-          <div class="form-group">
-            <label>User ID:</label>
-            <input type="text" id="submitUserId" placeholder="User ID" />
-          </div>
-          <div class="form-group">
-            <label>Answers Map JSON (questionId: "A" | "B" | "C" | "D"):</label>
-            <textarea id="submitAnswersJson" rows="4">{"question_id_here": "B"}</textarea>
+            <input type="text" id="detailQuizId" placeholder="Quiz ID" />
           </div>
           <div class="btn-row">
-            <button class="btn-success" onclick="submitQuizAnswers()">Submit & Compute Result</button>
+            <button class="btn-secondary" onclick="getQuizById()">Fetch Raw JSON</button>
+            <button class="btn-danger" onclick="deleteQuiz()">Delete Quiz</button>
           </div>
         </div>
       </div>

@@ -1,0 +1,51 @@
+A (Question),B (Correct Answer)
+What programming language is used to develop Flutter applications?,Dart
+What state management package was originally recommended by Google in Flutter documentation?,Provider
+Which embedded relational database plugin is widely used in Flutter for structured local storage?,sqflite (SQLite)
+What widget is used for rendering repeating list items efficiently on demand?,ListView.builder
+What standard file format represents scalable vector graphics commonly rendered using flutter_svg?,SVG
+What rendering engine did Flutter historically use prior to the rollout of Impeller?,Skia
+What new rendering engine was developed for Flutter to resolve shader compilation jank?,Impeller
+Which widget serves as the root container to implement basic Material Design visual layouts?,Scaffold
+What base class do widgets that do not require mutable internal state inherit from?,StatelessWidget
+What method is called exactly once when a State object is inserted into the widget tree?,initState()
+What method must be called to notify the framework that internal state has changed and triggers a rebuild?,setState()
+What method is called when a State object is permanently removed from the widget tree?,dispose()
+Which Dart keyword enables sound null safety by indicating a variable can hold a null value?,?
+Which Dart keyword guarantees that a non-nullable variable will be initialized before it is read?,late
+Which Dart collection type represents an unordered collection of unique items?,Set
+What keyword is used in Dart to define compile-time constants?,const
+What architectural pattern separates UI from business logic using Events and States?,BLoC (Business Logic Component)
+What reactive state management package is known for avoiding boilerplate and eliminating context dependency?,GetX
+Which lightweight key-value database written purely in Dart is commonly used for NoSQL storage?,Hive
+What plugin provides persistent key-value storage for simple data like user settings across platforms?,shared_preferences
+What official package is used in Flutter/Dart to make HTTP network requests?,http
+"Which popular third-party Dart HTTP client offers interceptors, global configuration, and FormData support?",Dio
+What Dart object represents a computation that completes asynchronously with a value or error?,Future
+What construct in Dart represents an asynchronous sequence of data events?,Stream
+Which widget automatically rebuilds its UI based on the latest interaction with a Future?,FutureBuilder
+Which widget listens to a Stream and rebuilds itself whenever a new event is emitted?,StreamBuilder
+What widget is used to lay out child widgets in a single horizontal row?,Row
+What widget arranges its children in a single vertical sequence?,Column
+Which layout widget allows overlapping child widgets on top of each other?,Stack
+What widget should be wrapped around a child to give it padding inside its parent?,Padding
+What widget provides material ripple tap effects and touch interactions to its child?,InkWell
+"What widget detects gestures like taps, drags, and scaling without applying Material visual effects?",GestureDetector
+"What file in a Flutter project defines package dependencies, assets, and app metadata?",pubspec.yaml
+What command is executed in the terminal to download dependencies specified in pubspec.yaml?,flutter pub get
+What command checks the local environment and reports any missing tools or SDK requirements?,flutter doctor
+What Flutter build mode is optimized for rapid iteration with Hot Reload and assertions enabled?,Debug Mode
+What Flutter build mode compiles ahead-of-time (AOT) with optimizations for maximum performance?,Release Mode
+What feature allows developers to see code changes in seconds without restarting the app or losing state?,Stateful Hot Reload
+Which widget in Flutter creates a scrollable grid of widgets?,GridView
+"Which widget prevents content from being obscured by system status bars, notches, or rounded screen corners?",SafeArea
+What mechanism does Flutter use to communicate between Dart code and native platform code (Java/Kotlin/Swift)?,Platform Channels (MethodChannel)
+What Dart construct runs code in a separate memory heap/thread for heavy background computation?,Isolate
+"Which built-in Flutter tool inspects widget hierarchies, timelines, and memory allocations?",Flutter DevTools
+What testing function is used to interact with and verify widgets in Flutter widget tests?,testWidgets()
+What testing utility object searches for widgets in the widget tree during automated tests?,CommonFinders (find)
+What widget provides navigation and routing capabilities by managing a stack of Route objects?,Navigator
+What declarative routing package created by the Flutter team simplifies deep linking and navigation 2.0?,go_router
+Which widget allows creating smooth explicit animations using an AnimationController?,AnimatedBuilder
+Which widget automatically animates transitions between two screens for a shared element?,Hero
+What compilation technique enables Dart web apps to run with near-native performance in modern browsers?,WebAssembly (Wasm)
