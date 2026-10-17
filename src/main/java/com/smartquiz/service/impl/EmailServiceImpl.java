@@ -37,6 +37,12 @@ public class EmailServiceImpl implements EmailService {
     @Value("${resend.from-email:${RESEND_FROM_EMAIL:SmartQuiz <onboarding@resend.dev>}}")
     private String resendFromEmail;
 
+    @Value("${brevo.api-key:${BREVO_API_KEY:}}")
+    private String brevoApiKey;
+
+    @Value("${brevo.sender-email:${BREVO_SENDER_EMAIL:devminhprogram@gmail.com}}")
+    private String brevoSenderEmail;
+
     @Override
     public void sendOtpEmail(String toEmail, String fullName, String otpCode) {
         log.info("==========================================================");
@@ -48,13 +54,19 @@ public class EmailServiceImpl implements EmailService {
 
         String htmlContent = buildOtpHtmlContent(fullName, otpCode);
 
-        // 1. Try Resend HTTPS API first (Bypasses Render's blocked SMTP ports)
+        // 1. Try Brevo HTTPS API (Can send to ANY email in the world)
+        if (brevoApiKey != null && !brevoApiKey.isBlank()) {
+            boolean sent = sendViaBrevo(toEmail, otpCode, htmlContent);
+            if (sent) return;
+        }
+
+        // 2. Try Resend HTTPS API
         if (resendApiKey != null && !resendApiKey.isBlank()) {
             boolean sent = sendViaResend(toEmail, otpCode, htmlContent);
             if (sent) return;
         }
 
-        // 2. Fallback to JavaMailSender if configured
+        // 3. Fallback to JavaMailSender if configured
         if (mailSender == null) {
             log.info("No active mail sender configured. OTP printed to console for local testing.");
             return;
@@ -110,6 +122,43 @@ public class EmailServiceImpl implements EmailService {
             }
         } catch (Exception e) {
             log.warn("Failed to dispatch email via Resend HTTPS API: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    private boolean sendViaBrevo(String toEmail, String otpCode, String htmlContent) {
+        try {
+            log.info("Sending OTP verification email via Brevo HTTPS API to {}...", toEmail);
+            Map<String, Object> body = Map.of(
+                    "sender", Map.of("name", "SmartQuiz", "email", brevoSenderEmail.trim()),
+                    "to", List.of(Map.of("email", toEmail)),
+                    "subject", "SmartQuiz - Email Verification Code: " + otpCode,
+                    "htmlContent", htmlContent
+            );
+
+            String jsonPayload = objectMapper.writeValueAsString(body);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api.brevo.com/v3/smtp/email"))
+                    .header("api-key", brevoApiKey.trim())
+                    .header("Content-Type", "application/json")
+                    .header("Accept", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonPayload, StandardCharsets.UTF_8))
+                    .timeout(Duration.ofSeconds(10))
+                    .build();
+
+            HttpClient client = HttpClient.newHttpClient();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                log.info("Verification email successfully delivered via Brevo API to {}. Response: {}", toEmail, response.body());
+                return true;
+            } else {
+                log.warn("Brevo API returned non-2xx status code {}: {}", response.statusCode(), response.body());
+                return false;
+            }
+        } catch (Exception e) {
+            log.warn("Failed to dispatch email via Brevo HTTPS API: {}", e.getMessage());
             return false;
         }
     }
