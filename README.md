@@ -3,49 +3,75 @@
 Enterprise-grade Spring Boot 3 backend developed for the **SmartQuiz** Android mobile application (PRM393 course project).
 
 ## 🚀 Key Features
-- **Spring Boot 3.3.4 & Java 21+** with Spring Data JPA & Hibernate 6.
-- **MySQL Database Integration** with automatic schema updates (`ddl-auto=update`).
+- **Spring Boot 3.3.4 & Java 21+** with **Spring Data MongoDB**.
+- **MongoDB NoSQL Integration**: High-performance document database with automatic index creation and embedded document patterns.
 - **Dynamic Excel & CSV Parsing (Apache POI 5.2.5 + Commons CSV)**:
   - Supports multipart file uploads up to **15MB**.
   - Parses `.xlsx`, `.xls`, and `.csv` files.
-  - Automatically identifies headers, questions, option sets (A, B, C, D), and answer keys.
-  - Generates structured `QuizSet` and cascaded `Question` entities in MySQL.
+  - Automatically identifies questions, option sets (A, B, C, D), and answer keys.
+  - Automatically generates intelligent distractors and randomized option slots from 2-column Q&A sheets.
+  - Stores structured `QuizSet` with embedded `Question` documents in MongoDB.
 - **Full Authentication**: User registration with email uniqueness validation, password verification, and streak tracking.
+- **Secure Email OTP Verification**: 6-digit verification code with 5-minute expiration and automated daily database purging.
 - **Quiz Taking & Grading Engine**: Automated scoring, streak calculation, average score tracking, and instant completion alert generation.
 - **Push Notification Service**: User study reminders, streak badges, and quiz alerts.
 - **OpenAPI 3 / Swagger UI**: Built-in interactive API playground.
-- **Global CORS Configured**: Seamless integration with mobile apps and web testing tools (`@CrossOrigin(origins = "*")`).
+- **Global CORS Configured**: Seamless integration with mobile apps and web clients (`@CrossOrigin(origins = "*")`).
 
 ---
 
 ## 🛠️ Tech Stack
 - **Framework:** Spring Boot 3.3.4
 - **Language:** Java 21 (LTS)
-- **Database:** MySQL 9.4 (Port 3306)
-- **Persistence:** Spring Data JPA / Hibernate 6
+- **Database:** MongoDB (Cloud Atlas / Local)
+- **Persistence:** Spring Data MongoDB
 - **Spreadsheet Engine:** Apache POI 5.2.5 (`poi`, `poi-ooxml`) + Apache Commons CSV 1.10.0
 - **Documentation:** Springdoc OpenAPI 2.5.0 (Swagger UI)
 - **Utility:** Project Lombok
 
 ---
 
+## ⚙️ Environment Configuration
+
+For security best practices, sensitive credentials (database connection, email passwords, JWT secrets) are injected via environment variables.
+
+### Environment Variables Template
+
+| Variable | Description | Example / Default |
+|---|---|---|
+| `PORT` | Application server port | `8088` |
+| `MONGODB_URI` | MongoDB connection URI | `mongodb://localhost:27017/smartquiz_db` |
+| `JWT_SECRET` | Secret key for signing JWT tokens | *(At least 256-bit secure random string)* |
+| `SPRING_MAIL_HOST` | SMTP server host | `smtp.gmail.com` |
+| `SPRING_MAIL_PORT` | SMTP server port | `587` |
+| `SPRING_MAIL_USERNAME` | SMTP sender email address | `your-email@example.com` |
+| `SPRING_MAIL_PASSWORD` | SMTP app password | `your-app-password` |
+
+> [!IMPORTANT]
+> **Security Notice:** Never commit raw database passwords, API keys, or mail app passwords directly into version control. Always configure them as environment variables on your hosting provider (e.g. Render) or in a local `.env` file that is ignored by Git.
+
+---
+
 ## ⚡ Running Locally
 
 ### 1. Database Setup
-Ensure MySQL is running on `localhost:3306`. The database `smartquiz_db` will be created automatically if it doesn't already exist.
-Credentials in `src/main/resources/application.properties`:
-```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/smartquiz_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
-spring.datasource.username=root
-spring.datasource.password=12345
+Ensure MongoDB is running locally on port `27017` or provide your cloud MongoDB connection URI via `MONGODB_URI`.
+
+```bash
+# Example local MongoDB URI:
+export MONGODB_URI="mongodb://localhost:27017/smartquiz_db"
 ```
 
 ### 2. Start the Server
 Run the application using the Maven wrapper:
 ```bash
+# Windows
+.\mvnw.cmd spring-boot:run
+
+# Linux / macOS
 ./mvnw spring-boot:run
 ```
-The server will start on port **8088**.
+The server will start on port **8088** (or the port defined by `PORT`).
 
 ### 3. Open Swagger UI Playground
 Navigate to:
@@ -61,33 +87,33 @@ Raw OpenAPI 3 JSON documentation:
 ### 1. Authentication (`/api/auth`)
 | Step | Method | Endpoint | Description |
 |---|---|---|---|
-| 1 | `POST` | `/api/auth/send-otp` | Enter email -> generates 6-digit OTP and sends to email |
-| 2 | `POST` | `/api/auth/register` | Enter `fullName`, `email`, `password`, and `otp` -> creates account & returns JWT Bearer token |
-| 3 | `POST` | `/api/auth/login` | Enter `email` & `password` -> verifies credentials and returns user profile & JWT Bearer token |
-| - | `GET` | `/api/auth/profile/{userId}` | Fetch user profile and streak details |
+| 1 | `POST` | `/api/auth/send-otp` | Send 6-digit verification code to user email (expires in 5 mins) |
+| 2 | `POST` | `/api/auth/register` | Register account with fullName, email, password, and OTP code |
+| 3 | `POST` | `/api/auth/login` | Authenticate user and receive JWT Bearer token |
+| - | `GET` | `/api/auth/profile/{userId}` | Fetch user profile and study streak details |
 
 ### 2. Quizzes (`/api/quizzes`)
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/quizzes` | Fetch all quiz sets with optional filter (`category`, `difficulty`, `search`) |
-| `GET` | `/api/quizzes/{id}` | Retrieve quiz details including all multiple choice questions |
+| `GET` | `/api/quizzes` | Fetch all quiz sets with optional filters (`category`, `difficulty`, `search`) |
+| `GET` | `/api/quizzes/{id}` | Retrieve full quiz details with questions |
 | `POST` | `/api/quizzes` | Create a quiz set manually via JSON |
-| `POST` | `/api/quizzes/import` | **Import quiz questions from `.xlsx` or `.csv` (Multipart up to 15MB)** |
-| `POST` | `/api/quizzes/{id}/submit` | Submit answers, calculate score %, update user streak, create alert |
+| `POST` | `/api/quizzes/import` | **Import quiz questions from `.xlsx`, `.xls`, or `.csv` (Multipart up to 15MB)** |
+| `POST` | `/api/quizzes/{id}/submit` | Submit answers, calculate score, increment streak, generate alert |
 | `DELETE` | `/api/quizzes/{id}` | Delete a quiz set and its questions |
 
 ### 3. Notifications (`/api/notifications`)
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/notifications/{userId}` | Fetch study reminders and alerts for user |
-| `POST` | `/api/notifications` | Dispatch custom study reminder or alert |
-| `PUT` | `/api/notifications/{id}/read` | Mark notification as read |
+| `GET` | `/api/notifications/{userId}` | Fetch user notifications and study reminders |
+| `POST` | `/api/notifications` | Dispatch custom notification or study alert |
+| `PUT` | `/api/notifications/{id}/read` | Mark a notification as read |
 
 ---
 
 ## 📊 Excel & CSV Import Format Guide
 
-The import endpoint accepts `.xlsx` or `.csv` formatted in either:
+The import endpoint accepts `.xlsx`, `.xls`, or `.csv` files formatted in either of the two supported schemas:
 
 ### Format A: Standard 4-Option Multiple Choice (Columns A-G)
 | Col A (Question) | Col B (Option A) | Col C (Option B) | Col D (Option C) | Col E (Option D) | Col F (Answer) | Col G (Explanation) |
@@ -95,13 +121,12 @@ The import endpoint accepts `.xlsx` or `.csv` formatted in either:
 | What language is used for Flutter? | Dart | Kotlin | Java | Swift | A | Powered by Dart |
 | Google's recommended state management? | Provider | Redux | MobX | Zustand | A | Officially endorsed |
 
-### Format B: Q&A / Flashcard (Columns A-C)
-| Col A (Row #) | Col B (Question) | Col C (Correct Answer) |
+### Format B: Q&A / Flashcard (Columns A-B or A-C)
+| Col A (Row / Question) | Col B (Question / Answer) | Col C (Correct Answer) |
 |---|---|---|
-| 1 | Which database is built into Flutter? | SQLite |
-| 2 | What widget repeats list items efficiently? | ListView.builder |
-| 3 | What format are vector graphics in Flutter? | SVG |
+| What is the primary language for Android? | Kotlin | Officially supported by Google |
+| Which widget repeats list items efficiently? | ListView.builder | Recycles views on scroll |
 
-Sample test files are pre-generated in the repository at:
-- `sample_files/flutter_quiz_sample.xlsx`
-- `sample_files/quiz_sample.csv`
+> **Smart Option Generation:** For 2-column Q&A files, the parser automatically pools answers across the entire file, selects 3 intelligent distractors, and randomizes all 4 options (A, B, C, D) automatically!
+
+Sample import files are located in `sample_files/`.

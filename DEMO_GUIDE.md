@@ -28,9 +28,10 @@ Share this with your teammates so they can connect directly to the database:
 - **Tool:** [MongoDB Compass (Download)](https://www.mongodb.com/products/tools/compass)
 - **Connection URI:**
   ```text
-  mongodb+srv://devminhprogram_db_user:YklK8wNMj9dLow2O@smartquizdb.4exuwfu.mongodb.net/
+  mongodb+srv://devminhprogram_db_user:<DB_PASSWORD>@smartquizdb.4exuwfu.mongodb.net/
   ```
 - **Database Name:** `smartquiz_db`
+> *(Note: Replace `<DB_PASSWORD>` with the team database password shared privately)*
 
 ### Quick Steps to Connect:
 1. Open **MongoDB Compass**.
@@ -138,7 +139,7 @@ Follow this structured flow during your demo to impress your team:
 
 | Resource | Value |
 |---|---|
-| **MongoDB Atlas URI** | `mongodb+srv://devminhprogram_db_user:YklK8wNMj9dLow2O@smartquizdb.4exuwfu.mongodb.net/` |
+| **MongoDB Atlas URI** | `mongodb+srv://devminhprogram_db_user:<DB_PASSWORD>@smartquizdb.4exuwfu.mongodb.net/` |
 | **Demo User Email** | `alex@smartquiz.com` |
 | **Demo User Password** | `secret123` |
 | **Local Backend Port** | `http://localhost:8088` |

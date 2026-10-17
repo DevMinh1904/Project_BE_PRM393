@@ -24,9 +24,23 @@ document.addEventListener("DOMContentLoaded", () => {
     const createNotifEl = document.getElementById("createNotifUserId");
     if (createNotifEl) createNotifEl.value = state.userId;
   }
+  const savedBaseUrl = localStorage.getItem("smartquiz_base_url");
+  if (savedBaseUrl) {
+    const el = document.getElementById("baseUrl");
+    if (el) el.value = savedBaseUrl;
+  }
   // Automatically fetch quizzes on start so cards appear
   getAllQuizzes();
 });
+
+function setApiUrl(url) {
+  const el = document.getElementById("baseUrl");
+  if (el) {
+    el.value = url;
+    localStorage.setItem("smartquiz_base_url", url);
+    getAllQuizzes();
+  }
+}
 
 function getBaseUrl() {
   const url = document.getElementById("baseUrl").value.trim();
