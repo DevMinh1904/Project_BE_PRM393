@@ -92,9 +92,13 @@ public class EmailServiceImpl implements EmailService {
 
     private boolean sendViaResend(String toEmail, String otpCode, String htmlContent) {
         try {
-            log.info("Sending OTP verification email via Resend HTTPS API to {}...", toEmail);
+            String effectiveSender = resendFromEmail;
+            if (effectiveSender == null || effectiveSender.isBlank() || effectiveSender.contains("@gmail.com") || effectiveSender.contains("@yahoo") || effectiveSender.contains("@hotmail")) {
+                effectiveSender = "SmartQuiz <onboarding@resend.dev>";
+            }
+
             Map<String, Object> body = Map.of(
-                    "from", resendFromEmail,
+                    "from", effectiveSender,
                     "to", List.of(toEmail),
                     "subject", "SmartQuiz - Email Verification Code: " + otpCode,
                     "html", htmlContent

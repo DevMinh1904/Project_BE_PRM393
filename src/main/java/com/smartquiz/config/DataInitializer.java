@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,6 +25,7 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final QuizSetRepository quizSetRepository;
     private final NotificationRepository notificationRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args) {
@@ -34,7 +36,7 @@ public class DataInitializer implements CommandLineRunner {
             User demoUser = User.builder()
                     .fullName("Alex Student")
                     .email("alex@smartquiz.com")
-                    .password("secret123")
+                    .password(passwordEncoder.encode("secret123"))
                     .currentStreak(5)
                     .isVerified(true)
                     .createdAt(LocalDateTime.now())

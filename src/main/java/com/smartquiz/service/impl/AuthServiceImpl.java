@@ -14,6 +14,7 @@ import com.smartquiz.service.EmailService;
 import com.smartquiz.service.JwtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +31,7 @@ public class AuthServiceImpl implements AuthService {
     private final NotificationRepository notificationRepository;
     private final EmailService emailService;
     private final JwtService jwtService;
+    private final PasswordEncoder passwordEncoder;
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
@@ -66,6 +68,11 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("Email '" + email + "' is already registered. Please log in directly.");
         }
 
+        // Check confirm password
+        if (!request.getPassword().equals(request.getConfirmPassword())) {
+            throw new BadRequestException("Password and Confirm Password do not match.");
+        }
+
         // 1. Verify OTP against OtpVerification record
         OtpVerification verification = otpVerificationRepository.findByEmail(email)
                 .orElseThrow(() -> new BadRequestException("No OTP requested for '" + email + "'. Please request an OTP first."));
@@ -81,11 +88,11 @@ public class AuthServiceImpl implements AuthService {
         // 2. Consume OTP (single use)
         otpVerificationRepository.delete(verification);
 
-        // 3. Create active User
+        // 3. Create active User with BCrypt encrypted password
         User user = User.builder()
                 .fullName(request.getFullName().trim())
                 .email(email)
-                .password(request.getPassword())
+                .password(passwordEncoder.encode(request.getPassword()))
                 .currentStreak(0)
                 .isVerified(true)
                 .build();
@@ -117,7 +124,20 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BadRequestException("Invalid email or password."));
 
-        if (!user.getPassword().equals(request.getPassword())) {
+        boolean passwordMatches = false;
+        String currentPasswordHash = user.getPassword();
+
+        if (currentPasswordHash != null && (currentPasswordHash.startsWith("$2a$") || currentPasswordHash.startsWith("$2b$") || currentPasswordHash.startsWith("$2y$"))) {
+            passwordMatches = passwordEncoder.matches(request.getPassword(), currentPasswordHash);
+        } else if (currentPasswordHash != null && currentPasswordHash.equals(request.getPassword())) {
+            // Backward compatibility: match legacy plaintext password and automatically upgrade to BCrypt
+            passwordMatches = true;
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+            userRepository.save(user);
+            log.info("Legacy plaintext password for user {} upgraded to BCrypt hash.", email);
+        }
+
+        if (!passwordMatches) {
             throw new BadRequestException("Invalid email or password.");
         }
 

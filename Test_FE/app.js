@@ -200,14 +200,20 @@ async function registerUser() {
   const fullName = document.getElementById("regFullName").value.trim();
   const email = document.getElementById("regEmail").value.trim();
   const password = document.getElementById("regPassword").value;
+  const confirmPassword = document.getElementById("regConfirmPassword").value;
   const otp = document.getElementById("regOtp").value.trim();
 
-  if (!fullName || !email || !password || !otp) {
-    alert("Please fill in Full Name, Email, Password, and the 6-digit OTP.");
+  if (!fullName || !email || !password || !confirmPassword || !otp) {
+    alert("Please fill in Full Name, Email, Password, Confirm Password, and the 6-digit OTP.");
     return;
   }
 
-  const payload = { fullName, email, password, otp };
+  if (password !== confirmPassword) {
+    alert("Password and Confirm Password do not match!");
+    return;
+  }
+
+  const payload = { fullName, email, password, confirmPassword, otp };
   const result = await makeRequest("POST", "/api/auth/register", payload);
 
   if (result.ok && result.data && result.data.data) {
