@@ -201,10 +201,9 @@ async function registerUser() {
   const email = document.getElementById("regEmail").value.trim();
   const password = document.getElementById("regPassword").value;
   const confirmPassword = document.getElementById("regConfirmPassword").value;
-  const otp = document.getElementById("regOtp").value.trim();
 
-  if (!fullName || !email || !password || !confirmPassword || !otp) {
-    alert("Please fill in Full Name, Email, Password, Confirm Password, and the 6-digit OTP.");
+  if (!fullName || !email || !password || !confirmPassword) {
+    alert("Please fill in Full Name, Email, Password, and Confirm Password.");
     return;
   }
 
@@ -213,7 +212,7 @@ async function registerUser() {
     return;
   }
 
-  const payload = { fullName, email, password, confirmPassword, otp };
+  const payload = { fullName, email, password, confirmPassword };
   const result = await makeRequest("POST", "/api/auth/register", payload);
 
   if (result.ok && result.data && result.data.data) {

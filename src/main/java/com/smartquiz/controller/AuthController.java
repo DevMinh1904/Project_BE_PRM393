@@ -31,8 +31,8 @@ public class AuthController {
 
     @PostMapping("/register")
     @Operation(
-            summary = "2. Register Account with OTP",
-            description = "Registers user account by verifying the 6-digit OTP code along with name, email, and password. Returns user profile and JWT Bearer token."
+            summary = "2. Register Account",
+            description = "Registers user account directly with name, email, and password. Returns user profile and JWT Bearer token."
     )
     public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
         AuthResponse authResponse = authService.register(request);

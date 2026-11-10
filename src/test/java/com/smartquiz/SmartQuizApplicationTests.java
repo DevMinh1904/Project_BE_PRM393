@@ -113,34 +113,21 @@ class SmartQuizApplicationTests {
     void testAuthFlow() {
         String email = "testuser_" + System.currentTimeMillis() + "@smartquiz.com";
 
-        // 1. Send OTP to email
-        authService.sendOtp(com.smartquiz.dto.SendOtpRequest.builder().email(email).build());
-
-        // 2. Retrieve generated OTP
-        var otpEntry = otpVerificationRepository.findByEmail(email).orElseThrow();
-        assertNotNull(otpEntry.getOtpCode());
-
-        // 3. Register with invalid OTP should fail
-        RegisterRequest badRegisterReq = RegisterRequest.builder()
+        // 1. Direct registration succeeds without OTP
+        RegisterRequest registerReq = RegisterRequest.builder()
                 .fullName("Test Developer")
                 .email(email)
                 .password("password123")
-                .otp("000000")
+                .confirmPassword("password123")
                 .build();
-        assertThrows(Exception.class, () -> authService.register(badRegisterReq));
-
-        // 4. Register with valid OTP should succeed
-        RegisterRequest goodRegisterReq = RegisterRequest.builder()
-                .fullName("Test Developer")
-                .email(email)
-                .password("password123")
-                .otp(otpEntry.getOtpCode())
-                .build();
-        AuthResponse user = authService.register(goodRegisterReq);
+        AuthResponse user = authService.register(registerReq);
         assertNotNull(user.getId());
         assertEquals(email, user.getEmail());
         assertTrue(user.getIsVerified());
         assertNotNull(user.getToken());
+
+        // 2. Duplicate email registration should fail
+        assertThrows(Exception.class, () -> authService.register(registerReq));
 
         // 5. Login succeeds with JWT token
         LoginRequest loginReq = LoginRequest.builder()

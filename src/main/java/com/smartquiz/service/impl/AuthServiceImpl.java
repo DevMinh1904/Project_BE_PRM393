@@ -68,27 +68,15 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("Email '" + email + "' is already registered. Please log in directly.");
         }
 
-        // Check confirm password
-        if (!request.getPassword().equals(request.getConfirmPassword())) {
+        // Check confirm password if provided
+        if (request.getConfirmPassword() != null && !request.getPassword().equals(request.getConfirmPassword())) {
             throw new BadRequestException("Password and Confirm Password do not match.");
         }
 
-        // 1. Verify OTP against OtpVerification record
-        OtpVerification verification = otpVerificationRepository.findByEmail(email)
-                .orElseThrow(() -> new BadRequestException("No OTP requested for '" + email + "'. Please request an OTP first."));
+        // Clean up any pending OTP verification if exists
+        otpVerificationRepository.findByEmail(email).ifPresent(otpVerificationRepository::delete);
 
-        if (LocalDateTime.now().isAfter(verification.getExpiryTime())) {
-            throw new BadRequestException("The OTP code has expired. Please request a new OTP code.");
-        }
-
-        if (!verification.getOtpCode().equals(request.getOtp().trim())) {
-            throw new BadRequestException("Invalid OTP code. Please enter the correct 6-digit code sent to your email.");
-        }
-
-        // 2. Consume OTP (single use)
-        otpVerificationRepository.delete(verification);
-
-        // 3. Create active User with BCrypt encrypted password
+        // Create active User with BCrypt encrypted password (direct registration - no OTP required)
         User user = User.builder()
                 .fullName(request.getFullName().trim())
                 .email(email)

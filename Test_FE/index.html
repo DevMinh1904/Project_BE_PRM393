@@ -321,23 +321,10 @@
 
       <!-- TAB 1: AUTHENTICATION -->
       <div id="tab-auth" class="tab-content active">
-        <!-- 1. Send OTP -->
+        <!-- 1. Register Account -->
         <div class="card">
-          <h2>1. Send Registration OTP</h2>
-          <p class="subtitle" style="margin-bottom:8px;">Endpoint: <code>POST /api/auth/send-otp</code></p>
-          <div class="form-group">
-            <label>Recipient Email:</label>
-            <input type="email" id="otpEmail" placeholder="e.g. learner@example.com" />
-          </div>
-          <div class="btn-row">
-            <button onclick="sendOtp()">Send OTP Email</button>
-          </div>
-        </div>
-
-        <!-- 2. Register with OTP -->
-        <div class="card">
-          <h2>2. Register Account with OTP</h2>
-          <p class="subtitle" style="margin-bottom:8px;">Endpoint: <code>POST /api/auth/register</code></p>
+          <h2>1. Register Account</h2>
+          <p class="subtitle" style="margin-bottom:8px;">Endpoint: <code>POST /api/auth/register</code> (Direct - No OTP Required)</p>
           <div class="form-group">
             <label>Full Name:</label>
             <input type="text" id="regFullName" placeholder="e.g. Jane Doe" />
@@ -354,12 +341,21 @@
             <label>Confirm Password:</label>
             <input type="password" id="regConfirmPassword" placeholder="Re-enter password" />
           </div>
+          <div class="btn-row">
+            <button class="btn-success" onclick="registerUser()">Register Account</button>
+          </div>
+        </div>
+
+        <!-- 2. Send OTP (Optional / Legacy) -->
+        <div class="card" style="opacity: 0.85;">
+          <h2>2. Send Test OTP (Optional / Legacy)</h2>
+          <p class="subtitle" style="margin-bottom:8px;">Endpoint: <code>POST /api/auth/send-otp</code></p>
           <div class="form-group">
-            <label>6-Digit OTP:</label>
-            <input type="text" id="regOtp" placeholder="e.g. 123456" />
+            <label>Recipient Email:</label>
+            <input type="email" id="otpEmail" placeholder="e.g. learner@example.com" />
           </div>
           <div class="btn-row">
-            <button class="btn-success" onclick="registerUser()">Register & Verify</button>
+            <button onclick="sendOtp()">Send Test OTP</button>
           </div>
         </div>
 

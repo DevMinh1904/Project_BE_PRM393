@@ -30,7 +30,6 @@ public class RegisterRequest {
     @Size(min = 6, max = 100, message = "Confirm password must be at least 6 characters")
     private String confirmPassword;
 
-    @NotBlank(message = "OTP verification code is required")
-    @Size(min = 6, max = 6, message = "OTP code must be exactly 6 digits")
+    // Optional legacy field: no longer required for registration
     private String otp;
 }
