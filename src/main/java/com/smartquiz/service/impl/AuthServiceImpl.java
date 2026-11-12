@@ -1,16 +1,14 @@
 package com.smartquiz.service.impl;
 
-import com.smartquiz.dto.*;
-import com.smartquiz.entity.Notification;
-import com.smartquiz.entity.OtpVerification;
+import com.smartquiz.dto.AuthResponse;
+import com.smartquiz.dto.LoginRequest;
+import com.smartquiz.dto.RegisterRequest;
+import com.smartquiz.dto.UserResponse;
 import com.smartquiz.entity.User;
 import com.smartquiz.exception.BadRequestException;
 import com.smartquiz.exception.ResourceNotFoundException;
-import com.smartquiz.repository.NotificationRepository;
-import com.smartquiz.repository.OtpVerificationRepository;
 import com.smartquiz.repository.UserRepository;
 import com.smartquiz.service.AuthService;
-import com.smartquiz.service.EmailService;
 import com.smartquiz.service.JwtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,45 +16,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.security.SecureRandom;
-import java.time.LocalDateTime;
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
-    private final OtpVerificationRepository otpVerificationRepository;
-    private final NotificationRepository notificationRepository;
-    private final EmailService emailService;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
-
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-
-    @Override
-    @Transactional
-    public void sendOtp(SendOtpRequest request) {
-        String email = request.getEmail().trim().toLowerCase();
-        log.info("Sending registration OTP to email: {}", email);
-
-        if (userRepository.existsByEmail(email)) {
-            throw new BadRequestException("Email '" + email + "' is already registered. Please log in directly.");
-        }
-
-        String otp = generateNumericOtp();
-
-        OtpVerification verification = otpVerificationRepository.findByEmail(email)
-                .orElse(OtpVerification.builder().email(email).build());
-
-        verification.setOtpCode(otp);
-        verification.setExpiryTime(LocalDateTime.now().plusMinutes(5));
-        otpVerificationRepository.save(verification);
-
-        emailService.sendOtpEmail(email, "Prospective Learner", otp);
-        log.info("Registration OTP dispatched to {}", email);
-    }
 
     @Override
     @Transactional
@@ -73,9 +40,6 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("Password and Confirm Password do not match.");
         }
 
-        // Clean up any pending OTP verification if exists
-        otpVerificationRepository.findByEmail(email).ifPresent(otpVerificationRepository::delete);
-
         // Create active User with BCrypt encrypted password (direct registration - no OTP required)
         User user = User.builder()
                 .fullName(request.getFullName().trim())
@@ -87,17 +51,7 @@ public class AuthServiceImpl implements AuthService {
 
         User savedUser = userRepository.save(user);
 
-        // 4. Send welcome notification
-        Notification welcomeNotice = Notification.builder()
-                .title("Welcome to SmartQuiz! 🚀")
-                .message("Welcome " + savedUser.getFullName() + "! Your account has been registered and verified. Start learning today!")
-                .timestamp(LocalDateTime.now())
-                .isRead(false)
-                .userId(savedUser.getId())
-                .build();
-        notificationRepository.save(welcomeNotice);
-
-        // 5. Generate JWT token
+        // Generate JWT token
         String token = jwtService.generateToken(savedUser);
 
         log.info("User registered successfully with ID: {}. JWT token issued.", savedUser.getId());
@@ -147,10 +101,6 @@ public class AuthServiceImpl implements AuthService {
                 .isVerified(user.getIsVerified())
                 .createdAt(user.getCreatedAt())
                 .build();
-    }
-
-    private String generateNumericOtp() {
-        return String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
     }
 
     private AuthResponse mapToAuthResponse(User user, String token) {

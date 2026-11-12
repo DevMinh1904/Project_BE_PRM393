@@ -1,14 +1,12 @@
 package com.smartquiz.service.impl;
 
 import com.smartquiz.dto.*;
-import com.smartquiz.entity.Notification;
 import com.smartquiz.entity.Question;
 import com.smartquiz.entity.QuizSet;
 import com.smartquiz.entity.QuizSubmission;
 import com.smartquiz.entity.User;
 import com.smartquiz.exception.BadRequestException;
 import com.smartquiz.exception.ResourceNotFoundException;
-import com.smartquiz.repository.NotificationRepository;
 import com.smartquiz.repository.QuizSetRepository;
 import com.smartquiz.repository.QuizSubmissionRepository;
 import com.smartquiz.repository.UserRepository;
@@ -35,7 +33,6 @@ public class QuizServiceImpl implements QuizService {
     private final QuizSetRepository quizSetRepository;
     private final UserRepository userRepository;
     private final QuizSubmissionRepository submissionRepository;
-    private final NotificationRepository notificationRepository;
     private final FileParserService fileParserService;
     private final MongoTemplate mongoTemplate;
 
@@ -233,17 +230,6 @@ public class QuizServiceImpl implements QuizService {
                 .orElse(scorePercentage);
         quizSet.setAvgScore(Math.round(newAvg * 10.0) / 10.0);
         quizSetRepository.save(quizSet);
-
-        // Generate achievement / reminder notification
-        Notification notice = Notification.builder()
-                .title("Quiz Completed: " + quizSet.getTitle())
-                .message("You scored " + scorePercentage + "% (" + correctCount + "/" + questions.size() +
-                        ")! Your current learning streak is now " + updatedStreak + " days 🔥.")
-                .timestamp(LocalDateTime.now())
-                .isRead(false)
-                .userId(user.getId())
-                .build();
-        notificationRepository.save(notice);
 
         return QuizSubmissionResponse.builder()
                 .submissionId(submission.getId())

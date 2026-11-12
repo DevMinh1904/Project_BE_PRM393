@@ -11,10 +11,8 @@ Enterprise-grade Spring Boot 3 backend developed for the **SmartQuiz** Android m
   - Automatically identifies questions, option sets (A, B, C, D), and answer keys.
   - Automatically generates intelligent distractors and randomized option slots from 2-column Q&A sheets.
   - Stores structured `QuizSet` with embedded `Question` documents in MongoDB.
-- **Full Authentication**: User registration with email uniqueness validation, password verification, and streak tracking.
-- **Secure Email OTP Verification**: 6-digit verification code with 5-minute expiration and automated daily database purging.
-- **Quiz Taking & Grading Engine**: Automated scoring, streak calculation, average score tracking, and instant completion alert generation.
-- **Push Notification Service**: User study reminders, streak badges, and quiz alerts.
+- **Full Authentication**: User registration with email uniqueness validation, BCrypt password verification, JWT token authorization, and streak tracking.
+- **Quiz Taking & Grading Engine**: Automated scoring, streak calculation, and average score tracking.
 - **OpenAPI 3 / Swagger UI**: Built-in interactive API playground.
 - **Global CORS Configured**: Seamless integration with mobile apps and web clients (`@CrossOrigin(origins = "*")`).
 
@@ -85,12 +83,11 @@ Raw OpenAPI 3 JSON documentation:
 ## 📖 REST API Endpoints Overview
 
 ### 1. Authentication (`/api/auth`)
-| Step | Method | Endpoint | Description |
-|---|---|---|---|
-| 1 | `POST` | `/api/auth/send-otp` | Send 6-digit verification code to user email (expires in 5 mins) |
-| 2 | `POST` | `/api/auth/register` | Register account with fullName, email, password, and OTP code |
-| 3 | `POST` | `/api/auth/login` | Authenticate user and receive JWT Bearer token |
-| - | `GET` | `/api/auth/profile/{userId}` | Fetch user profile and study streak details |
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/auth/register` | Register account with fullName, email, password, and confirmPassword |
+| `POST` | `/api/auth/login` | Authenticate user and receive JWT Bearer token |
+| `GET` | `/api/auth/profile/{userId}` | Fetch user profile and study streak details |
 
 ### 2. Quizzes (`/api/quizzes`)
 | Method | Endpoint | Description |
@@ -99,15 +96,8 @@ Raw OpenAPI 3 JSON documentation:
 | `GET` | `/api/quizzes/{id}` | Retrieve full quiz details with questions |
 | `POST` | `/api/quizzes` | Create a quiz set manually via JSON |
 | `POST` | `/api/quizzes/import` | **Import quiz questions from `.xlsx`, `.xls`, or `.csv` (Multipart up to 15MB)** |
-| `POST` | `/api/quizzes/{id}/submit` | Submit answers, calculate score, increment streak, generate alert |
+| `POST` | `/api/quizzes/{id}/submit` | Submit answers, calculate score, increment streak |
 | `DELETE` | `/api/quizzes/{id}` | Delete a quiz set and its questions |
-
-### 3. Notifications (`/api/notifications`)
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/notifications/{userId}` | Fetch user notifications and study reminders |
-| `POST` | `/api/notifications` | Dispatch custom notification or study alert |
-| `PUT` | `/api/notifications/{id}/read` | Mark a notification as read |
 
 ---
 

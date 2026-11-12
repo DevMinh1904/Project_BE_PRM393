@@ -29,7 +29,4 @@ public class RegisterRequest {
     @NotBlank(message = "Confirm password is required")
     @Size(min = 6, max = 100, message = "Confirm password must be at least 6 characters")
     private String confirmPassword;
-
-    // Optional legacy field: no longer required for registration
-    private String otp;
 }

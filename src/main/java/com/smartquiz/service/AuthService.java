@@ -1,10 +1,11 @@
 package com.smartquiz.service;
 
-import com.smartquiz.dto.*;
+import com.smartquiz.dto.AuthResponse;
+import com.smartquiz.dto.LoginRequest;
+import com.smartquiz.dto.RegisterRequest;
+import com.smartquiz.dto.UserResponse;
 
 public interface AuthService {
-
-    void sendOtp(SendOtpRequest request);
 
     AuthResponse register(RegisterRequest request);
 

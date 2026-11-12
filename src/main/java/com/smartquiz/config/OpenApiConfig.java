@@ -25,7 +25,7 @@ public class OpenApiConfig {
                         .title("SmartQuiz Mobile App Backend REST API")
                         .description("Production-ready Spring Boot 3.x backend REST API for SmartQuiz Android application. " +
                                 "Supports User Auth with JWT Bearer Token, Quiz Management, Dynamic Question Import via Excel (.xlsx) / CSV using Apache POI, " +
-                                "Quiz Taking & Automated Scoring, and Push Notifications.")
+                                "and Quiz Taking & Automated Scoring.")
                         .version("1.0.0")
                         .contact(new Contact()
                                 .name("SmartQuiz Development Team")

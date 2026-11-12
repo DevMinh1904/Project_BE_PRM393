@@ -106,9 +106,6 @@ class SmartQuizApplicationTests {
         assertEquals("Flutter Quiz Imported", importedQuiz.getTitle());
     }
 
-    @Autowired
-    private com.smartquiz.repository.OtpVerificationRepository otpVerificationRepository;
-
     @Test
     void testAuthFlow() {
         String email = "testuser_" + System.currentTimeMillis() + "@smartquiz.com";

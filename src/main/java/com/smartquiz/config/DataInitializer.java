@@ -1,10 +1,8 @@
 package com.smartquiz.config;
 
-import com.smartquiz.entity.Notification;
 import com.smartquiz.entity.Question;
 import com.smartquiz.entity.QuizSet;
 import com.smartquiz.entity.User;
-import com.smartquiz.repository.NotificationRepository;
 import com.smartquiz.repository.QuizSetRepository;
 import com.smartquiz.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +22,6 @@ public class DataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final QuizSetRepository quizSetRepository;
-    private final NotificationRepository notificationRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -43,26 +40,7 @@ public class DataInitializer implements CommandLineRunner {
                     .build();
             demoUser = userRepository.save(demoUser);
 
-            // 2. Create Notifications for Demo User
-            Notification n1 = Notification.builder()
-                    .title("Daily Goal Achieved! 🎯")
-                    .message("You completed your study session yesterday. Keep up the 5-day streak!")
-                    .timestamp(LocalDateTime.now().minusHours(4))
-                    .isRead(false)
-                    .userId(demoUser.getId())
-                    .build();
-
-            Notification n2 = Notification.builder()
-                    .title("New Quiz Available: Flutter Architecture")
-                    .message("Test your knowledge on state management and widget lifecycles in Flutter.")
-                    .timestamp(LocalDateTime.now().minusDays(1))
-                    .isRead(true)
-                    .userId(demoUser.getId())
-                    .build();
-
-            notificationRepository.saveAll(List.of(n1, n2));
-
-            // 3. Create Sample Quiz Sets
+            // 2. Create Sample Quiz Sets
             QuizSet quiz1 = QuizSet.builder()
                     .title("Mobile App Architecture (PRM393)")
                     .category("Computer Science")
